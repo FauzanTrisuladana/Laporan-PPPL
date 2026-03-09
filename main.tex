@@ -84,8 +84,8 @@
 }
 
 % Info dokumen
-\newcommand{\Pertemuan}{3}
-\newcommand{\Materi}{Routing dan Controller pada Laravel}
+\newcommand{\Pertemuan}{2}
+\newcommand{\Materi}{Unit Testing Lifecycle}
 \title{Laporan Praktikum \\ Pengujian Perangkat Lunak\\
 Pertemuan \Pertemuan\\
 \Materi}
@@ -204,8 +204,8 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Tujuan Praktikum}
 \begin{enumerate}
-    \item 
-    \item 
+  \item Mahasiswa memahami lifecicle dan anotasi yang ada pada JUnit.
+  \item Mahasiswa mampu mengimplementasikan anotasi pada pengujian unit.
 \end{enumerate}
 
 %contoh gambar dan kode
@@ -223,8 +223,118 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Hasil dan Pembahasan}
 \subsection{Persiapan Praktikum}
-\subsection{Hasil}
+\par Pada praktikum pertemuan ini, saya melanjutkan pekerjaan dari praktikum sebelumnya yang berfokus pada implementasi kelas \textit{Wallet} beserta unit test dasarnya menggunakan JUnit 5. Pada pertemuan sebelumnya, pengujian dilakukan dengan membuat objek \textit{Wallet} secara langsung di dalam hampir setiap method test. Pendekatan tersebut sudah dapat memverifikasi fungsionalitas utama, tetapi masih memiliki duplikasi kode yang cukup banyak pada bagian inisialisasi objek.
+
+\par Oleh karena itu, pada pertemuan ini saya mempersiapkan kembali proyek Maven yang sama, memastikan dependensi JUnit Jupiter pada file \textit{pom.xml} masih tetap aktif, kemudian melanjutkan pengembangan pada kelas \textit{WalletTest}. Fokus utama praktikum kali ini bukan lagi menambah fitur pada kelas \textit{Wallet}, tapi merapikan struktur pengujian dengan memanfaatkan anotasi lifecycle dari JUnit 5 dan penentuan urutan eksekusi untu k beberapa test tertentu.
+
+\subsection{Hasil Pengujian dan Refactoring Test}
+\par Pada tahap ini, saya melakukan refactoring pada kelas \textit{WalletTest} untuk membuat penulisan unit test lebih terstruktur dibandingkan praktikum sebelumnya. Jika pada laporan sebelumnya setiap test membuat objek \textit{Wallet} sendiri di dalam body method, maka pada pertemuan ini saya memindahkan objek uji menjadi atribut kelas, lalu mengatur proses inisialisasi dan pembersihannya melalui anotasi lifecycle JUnit 5.
+
+\par Selain itu, saya juga menambahkan mekanisme pengurutan pada beberapa test menggunakan \textit{OrderAnnotation} yaitu kode \texttt{@Order} diatas method untuk menunjukan urutan eksekusi kodenya. Tujuannya bukan untuk membuat test saling bergantung satu sama lain, tetapi juga untuk memudahkan pembacaan urutan skenario penting seperti kondisi awal objek, penambahan data, dan penghapusan data. Dengan cara ini, struktur test menjadi lebih rapi dan lebih mudah dianalisis ketika dijalankan melalui fitur \textit{Run Test} pada VS Code (yang saya gunakan).
+
+\begin{lstlisting}[language=Java, caption={Implementasi WalletTest setelah refactoring (sumber: WalletTest.java)}, label={lst:wallettest-refactor}]
+package com.example;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestMethodOrder;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.Arrays;
+import java.util.List;
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+class WalletTest {
+
+  Wallet wallet;
+
+  @BeforeAll
+  void BeforeAll() {
+    wallet = new Wallet("Budi");
+  }
+
+  @AfterAll
+  void AfterAll() {
+    wallet = null;
+  }
+
+  @BeforeEach
+  void BeforeEach() {
+    wallet = new Wallet("Budi");
+  }
+
+  @AfterEach
+  void AfterEach() {
+    wallet = null;
+  }
+
+  @Test
+  @Order(1)
+  void testInitialState() {
+    assertAll(
+        () -> assertNotNull(wallet.getCards()),
+        () -> assertNotNull(wallet.getCash()),
+        () -> assertTrue(wallet.getCards().isEmpty()),
+        () -> assertTrue(wallet.getCash().isEmpty()),
+        () -> assertEquals(0.0, wallet.getCashAmount(), 0.0001)
+    );
+  }
+
+  @Test
+  void testSetOwnerRejectsNull() {
+    assertThrows(IllegalArgumentException.class, () -> wallet.setOwner(null));
+  }
+
+  @Test
+  @Order(2)
+  void testAddAndGetCards() {
+    List<String> cards = Arrays.asList("Kartu1", "Kartu2");
+    wallet.addCards(cards);
+    assertIterableEquals(cards, wallet.getCards());
+  }
+
+  @Test
+  @Order(3)
+  void testWithdrawCards() {
+    wallet.addCards(Arrays.asList("Kartu1", "Kartu2", "Kartu3"));
+    wallet.withdrawCards(Arrays.asList("Kartu2"));
+    assertIterableEquals(Arrays.asList("Kartu1", "Kartu3"), wallet.getCards());
+  }
+}
+\end{lstlisting}
+
+\par Berdasarkan Listing \ref{lst:wallettest-refactor}, perubahan yang saya lakukan pada pertemuan ini dapat dibandingkan dengan praktikum sebelumnya sebagai berikut:
+\begin{enumerate}
+  \item \textbf{Penambahan import JUnit lifecycle dan ordering} pada baris 3--10. Pada praktikum sebelumnya, kelas test hanya membutuhkan anotasi \textit{Test}. Pada pertemuan ini saya menambahkan \textit{BeforeAll}, \textit{AfterAll}, \textit{BeforeEach}, \textit{AfterEach}, \textit{TestInstance}, \textit{MethodOrderer}, \textit{TestMethodOrder}, dan \textit{Order} untuk mendukung lifecycle dan pengurutan test.
+  \item \textbf{Penambahan anotasi kelas} pada baris 17--18. Baris ini mengubah perilaku kelas test agar mendukung pengaturan urutan eksekusi melalui \textit{OrderAnnotation} serta penggunaan \textit{PER\_CLASS} pada instance test.
+  \item \textbf{Perubahan cara inisialisasi objek uji} pada baris 20--36. Jika pada laporan sebelumnya objek \textit{Wallet} dibuat berulang kali di dalam setiap method test, maka pada pertemuan ini objek dipindahkan menjadi atribut kelas dan dikelola melalui method lifecycle. Fungsi perubahan ini adalah untuk mengurangi duplikasi penulisan kode, memusatkan proses setup, dan menjaga konsistensi kondisi awal setiap test.
+  \item \textbf{Penambahan anotasi order pada test tertentu}. Pada pertemuan ini saya menambahkan \textit{@Order} pada beberapa method seperti \textit{testInitialState()}, \textit{testAddAndGetCards()}, \textit{testWithdrawCards()}, serta method pengujian cash pada versi lengkap kelas \textit{WalletTest}. Fungsi penambahan ini adalah untuk membantu penyajian test dari skenario paling dasar menuju skenario lanjutan, misalnya dari kondisi awal objek, penambahan data, hingga penghapusan data.
+  \item \textbf{Perubahan gaya penulisan test case}. Pada praktikum sebelumnya hampir semua test diawali deklarasi lokal seperti \textit{Wallet wallet = new Wallet();}. Pada pertemuan ini deklarasi tersebut tidak perlu diulang pada setiap method karena sudah ditangani oleh \textit{BeforeEach}. Hal ini membuat isi test lebih fokus pada aksi dan asersi.
+\end{enumerate}
+
+\par Dalam proses refactoring ini, saya juga menemukan bahwa penggunaan \textit{AfterEach} yang mengatur \textit{wallet = null} dapat menyebabkan error \textit{NullPointerException} apabila objek tidak diinisialisasi ulang sebelum test berikutnya dijalankan. Karena itu, method \textit{BeforeEach} pada baris 30--32 menjadi bagian penting untuk memastikan setiap test memperoleh objek \textit{Wallet} baru dengan kondisi awal yang konsisten. Setelah perbaikan tersebut dilakukan, seluruh test pada kelas \textit{WalletTest} berhasil dijalankan kembali dengan hasil lulus seluruhnya.
+
+\subsection{Hasil Akhir Pengujian}
+\par Setelah proses refactoring selesai, kelas \textit{WalletTest} tetap mampu menguji seluruh skenario utama, yaitu kondisi awal objek, validasi owner, pengelolaan kartu, pengelolaan uang tunai, snapshot read-only, dan perhitungan total cash. Hasil pengujian menunjukkan bahwa seluruh test case dapat dijalankan dengan sukses. Dengan demikian, refactoring yang dilakukan tidak mengubah tujuan pengujian, tetapi meningkatkan keteraturan, keterbacaan, dan kemudahan pemeliharaan kode test.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/hasil-pengujian-wallettest-pertemuan2.png}
+  \caption{Hasil eksekusi unit test \textit{WalletTest} pada pertemuan 2 menunjukkan seluruh test case berhasil dijalankan}
+  \label{fig:hasil-pengujian-wallettest-pertemuan2}
+\end{figure}
 
 \section{Kesimpulan}
+\par Berdasarkan hasil praktikum pertemuan 2 yang telah dilakukan, saya dapat memahami bahwa penulisan unit test tidak hanya berfokus pada banyaknya skenario uji, tetapi juga pada bagaimana struktur test disusun agar rapi, konsisten, dan mudah dipelihara. Melalui pemanfaatan anotasi lifecycle di JUnit seperti \textit{BeforeEach}, \textit{AfterEach}, \textit{BeforeAll}, dan \textit{AfterAll}, saya dapat mengelola objek uji secara terpusat sehingga tidak perlu lagi menuliskan inisialisasi objek yang sama berulang kali pada setiap method test.
+
+\par Selain itu, penggunaan \textit{TestMethodOrder} dan \textit{Order} pada beberapa test membantu menyusun urutan eksekusi skenario yang penting secara lebih sistematis. Praktikum ini juga menunjukkan bahwa refactoring pada kelas test harus dilakukan dengan hati-hati karena perubahan lifecycle yang tidak lengkap dapat menimbulkan error seperti \textit{NullPointerException}. Setelah diperbaiki dengan inisialisasi ulang objek pada \textit{BeforeEach}, seluruh test kembali berjalan dengan baik. Dengan demikian, praktikum ini berhasil memperdalam pemahaman saya tentang refactoring unit test dan praktik yang lebih baik dalam penggunaan JUnit 5.
 
 \end{document}
