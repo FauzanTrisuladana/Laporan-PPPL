@@ -85,7 +85,7 @@
 
 % Info dokumen
 \newcommand{\Pertemuan}{3}
-\newcommand{\Materi}{Routing dan Controller pada Laravel}
+\newcommand{\Materi}{Parameterized Test}
 \title{Laporan Praktikum \\ Pengujian Perangkat Lunak\\
 Pertemuan \Pertemuan\\
 \Materi}
@@ -204,8 +204,8 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Tujuan Praktikum}
 \begin{enumerate}
-    \item 
-    \item 
+    \item Mahasiswa mampu memahami tipe-tipe parameter dalam test method.
+    \item Mahasiswa mampu mengimplementasikan tipe-tipe parameter pada pengujian
 \end{enumerate}
 
 %contoh gambar dan kode
@@ -223,8 +223,310 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Hasil dan Pembahasan}
 \subsection{Persiapan Praktikum}
-\subsection{Hasil}
+\par Pada praktikum pertemuan ini, saya berfokus pada penerapan \textit{parameterized test} untuk studi kasus kelas \textbf{Wallet}. Proyek yang digunakan masih sama, yaitu proyek Maven berbasis JUnit 5. Langkah awal yang saya lakukan (untuk berjaga-jaga) adalah memastikan dependensi JUnit pada file \textbf{pom.xml} tetap ada dan tetap aktif dan seluruh konfigurasi proyek masih dapat dijalankan dengan baik melalui fitur \textit{Run Test} di VS Code. 
+
+\par Pada laporan ini pembahasan utama diarahkan ke implementasi pengujian pada kelas \textbf{Wallet} beserta penyesuaian model data-datanya. Supaya pengujian dapat mengikuti kebutuhan soal yang diberikan, saya akan menambahkan kelas \textbf{Owner}, mengubah sebagian implementasi di kelas \textbf{Wallet}, serta menyiapkan data uji dari beberapa sumber parameter.
+
+\par Selain itu, saya juga menyiapkan kelas \textbf{Params} yang juga digunakan saat latihan, sebagai penyedia data untuk anotasi \textbf{@MethodSource}. Method pertama pada kelas tersebut, yaitu \textbf{provideParameters()}, tetap dipakai pada latihan di kelas \textbf{KalkulatorTest}. Sementara itu, pada studi kasus \textbf{Wallet}, saya hanya menggunakan method kedua, yaitu \textbf{provideOwners()}, sehingga satu kelas penyedia parameter dapat digunakan kembali sehingga saya tidak perlu membuat file provider tambahan lagi.
+
+\subsection{Pembuatan Kelas Owner}
+\begin{lstlisting}[language=Java, caption={Implementasi kelas Owner yang digunakan sebagai objek pemilik Wallet}, label={lst:owner-class}]
+package com.example;
+
+import java.util.Objects;
+
+public class Owner {
+  private final String id;
+  private final String name;
+  private final String email;
+
+  public Owner(String id, String name, String email) {
+    this.id = requireValue(id, "id");
+    this.name = requireValue(name, "name");
+    this.email = requireValue(email, "email");
+  }
+
+  public String getId() {
+    return id;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public String getEmail() {
+    return email;
+  }
+
+  private String requireValue(String value, String fieldName) {
+    if (value == null || value.isBlank()) {
+      throw new IllegalArgumentException(fieldName + " tidak boleh kosong");
+    }
+    return value;
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (this == other) {
+      return true;
+    }
+    if (!(other instanceof Owner owner)) {
+      return false;
+    }
+    return id.equals(owner.id)
+        && name.equals(owner.name)
+        && email.equals(owner.email);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(id, name, email);
+  }
+}
+\end{lstlisting}
+
+\subsection{Perubahan pada Kelas Wallet}
+\par Sebelum menerapkan pengujian, saya terlebih dahulu membandingkan implementasi lama kelas \textbf{Wallet} dengan versi yang sekarang. Pada kode lama, atribut \textbf{owner} masih bertipe \textbf{String}, constructor yang tersedia adalah \textbf{Wallet(String owner)}, dan operasi uang tunai hanya disediakan dalam bentuk \textbf{addCash(List<Double> cash)} serta \textbf{withdrawCash(List<Double> cash)}. Struktur tersebut masih cukup untuk saya gunakan pengujian dasar, tetapi belum sesuai dengan kebutuhan soal yang meminta pemilik dari wallet yang direpresentasikan sebagai objek dan pengujian nominal kas dari wallet itu dilakukan per nilai tunggal.
+
+\par Pada implementasi yang sekarang, saya mengubah atribut \textbf{owner} dari string menjadi objek \textbf{Owner}, mengganti constructor menjadi \textbf{Wallet(Owner owner)}, dan menyesuaikan method \textbf{setOwner()} serta \textbf{getOwner()} agar bekerja dengan objek tersebut. Selain itu, saya menambahkan overload \textbf{addCash(double amount)} dan \textbf{withdrawCash(double amount)} agar skenario pengujian \textit{deposit} dan \textit{withdraw} dapat dijalankan secara langsung menggunakan satu angka pada setiap eksekusi test. Untuk menjaga validasi, saya juga menambahkan method bantu \textbf{validateCashAmount()} dan \textbf{requireAmount()}, serta yang nested exception yaitu, \textbf{Wallet.InsufficientFundsException} untuk menandai kondisi saldo yang tidak mencukupi.
+
+\par Dengan perubahan tersebut, kelas \textbf{Wallet} tidak hanya tetap mendukung operasi lama berbasis daftar uang, tapi juga menjadi cocok juga untuk pengujian \textit{parameterized} yang memerlukan variasi input sederhana dan berulang. Perubahan ini merupakan inti dari penyesuaian implementasi agar pengujian yang diminta pada soal yang diberikan sehingga dapat dijalankan secara konsisten dalam kodenya.
+
+\begin{lstlisting}[language=Java, caption={Implementasi kelas Wallet setelah disesuaikan untuk parameterized test}, label={lst:wallet-class}]
+package com.example;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Wallet {
+  private Owner owner;
+  private final List<String> cards;
+  private final List<Double> cash;
+
+  public Wallet() {
+    this.cards = new ArrayList<>();
+    this.cash = new ArrayList<>();
+  }
+
+  public Wallet(Owner owner) {
+    this();
+    setOwner(owner);
+  }
+
+  public void setOwner(Owner owner) {
+    if (owner == null) {
+      throw new IllegalArgumentException("owner tidak boleh null");
+    }
+    this.owner = owner;
+  }
+
+  public Owner getOwner() {
+    return owner;
+  }
+
+  public void addCash(List<Double> cash) {
+    if (cash == null) {
+      throw new IllegalArgumentException("cash tidak boleh null");
+    }
+    for (Double amount : cash) {
+      validateCashAmount(amount);
+    }
+    this.cash.addAll(cash);
+  }
+
+  public void addCash(double amount) {
+    validateCashAmount(amount);
+    cash.add(amount);
+  }
+
+  public void withdrawCash(List<Double> cash) {
+    if (cash == null) {
+      throw new IllegalArgumentException("cash tidak boleh null");
+    }
+    for (Double amount : cash) {
+      withdrawCash(requireAmount(amount));
+    }
+  }
+
+  public void withdrawCash(double amount) {
+    validateCashAmount(amount);
+    double remaining = getCashAmount() - amount;
+    if (remaining < 0) {
+      throw new InsufficientFundsException("saldo tidak cukup");
+    }
+
+    cash.clear();
+    if (remaining > 0) {
+      cash.add(remaining);
+    }
+  }
+
+  public double getCashAmount() {
+    double total = 0;
+    for (Double amount : cash) {
+      total += amount;
+    }
+    return total;
+  }
+
+  private void validateCashAmount(double amount) {
+    if (amount <= 0) {
+      throw new IllegalArgumentException("amount harus > 0");
+    }
+  }
+
+  private double requireAmount(Double amount) {
+    if (amount == null) {
+      throw new IllegalArgumentException("amount tidak boleh null");
+    }
+    return amount;
+  }
+
+  public static class InsufficientFundsException extends RuntimeException {
+    public InsufficientFundsException(String message) {
+      super(message);
+    }
+  }
+}
+\end{lstlisting}
+
+\subsection{Hasil Pengujian dan Implementasi Parameterized Test}
+\par Pada tahap ini, saya mengimplementasikan pengujian pada kelas \textbf{WalletTest} dengan beberapa sumber parameter yang berbeda. Secara umum, bentuk parameter yang digunakan terdiri dari empat bagian. Pertama, anotasi \textbf{@ValueSource} dipakai untuk menguji nominal uang tunai valid dan tidak valid pada method \textbf{addCash(double amount)}. Kedua, anotasi \textbf{@CsvFileSource} dipakai untuk membaca data pengujian \textit{withdraw cash} valid dan tidak valid dari file CSV. Ketiga, anotasi \textbf{@MethodSource} dipakai untuk menyediakan objek \textbf{Owner} pada pengujian \textbf{setOwner()} dan constructor \textbf{Wallet(Owner owner)}. Keempat, satu method test biasa tetap dipertahankan untuk memverifikasi bahwa \textbf{setOwner(null)} tetap melempar \textbf{IllegalArgumentException}.
+
+\par Dibandingkan dengan pendekatan lama yang menuliskan banyak data uji langsung di dalam body method, struktur yang sekarang jauh lebih ringkas karena data parameter dapat dipisahkan dari logika assertion. Dengan cara ini, setiap method pengujian cukup berfokus pada aksi dan hasil yang diharapkan, sedangkan variasi nilainya dikelola oleh anotasi parameterized test. Dalam pengamatan saya itulah tujuan adanya parameterized test, yaitu untuk mengurangi duplikasi kode pada pengujian yang memiliki pola serupa tetapi menggunakan data yang berbeda-beda. Dengan pendekatan ini, penambahan skenario pengujian baru juga menjadi lebih mudah karena cukup menambahkan data baru pada sumber parameter tanpa harus menulis ulang struktur method testnya.
+
+\begin{lstlisting}[language=Java, caption={Implementasi WalletTest setelah diubah menjadi parameterized test}, label={lst:wallettest-parameterized}]
+package com.example;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvFileSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class WalletTest {
+
+  @ParameterizedTest
+  @ValueSource(doubles = {1000.0, 5000.0, 10000.0})
+  void addCashMenerimaNominalPositif(double nominal) {
+    Wallet wallet = new Wallet();
+
+    wallet.addCash(nominal);
+
+    assertEquals(nominal, wallet.getCashAmount(), 0.0001);
+  }
+
+  @ParameterizedTest
+  @ValueSource(doubles = {-1000.0, -1.0})
+  void addCashMenolakNominalNegatif(double nominal) {
+    Wallet wallet = new Wallet();
+
+    assertThrows(IllegalArgumentException.class, () -> wallet.addCash(nominal));
+  }
+
+  @ParameterizedTest
+  @CsvFileSource(resources = "/wallet-withdraw-valid.csv", numLinesToSkip = 1)
+  void withdrawCashValid(double deposit, double withdraw, double expectedTotal) {
+    Wallet wallet = new Wallet();
+    wallet.addCash(deposit);
+
+    wallet.withdrawCash(withdraw);
+
+    assertEquals(expectedTotal, wallet.getCashAmount(), 0.0001);
+  }
+
+  @ParameterizedTest
+  @CsvFileSource(resources = "/wallet-withdraw-invalid.csv", numLinesToSkip = 1)
+  void withdrawCashInvalid(double initialDeposit, double withdraw, String exceptionType) {
+    Wallet wallet = new Wallet();
+    if (initialDeposit > 0) {
+      wallet.addCash(initialDeposit);
+    }
+
+    assertThrows(resolveExpectedException(exceptionType), () -> wallet.withdrawCash(withdraw));
+  }
+
+  @ParameterizedTest
+  @MethodSource("com.example.Params#provideOwners")
+  void setOwnerDenganMethodSource(Owner owner) {
+    Wallet wallet = new Wallet();
+
+    wallet.setOwner(owner);
+
+    assertEquals(owner, wallet.getOwner());
+  }
+
+  @ParameterizedTest
+  @MethodSource("com.example.Params#provideOwners")
+  void constructorWalletDenganMethodSource(Owner owner) {
+    Wallet wallet = new Wallet(owner);
+
+    assertEquals(owner, wallet.getOwner());
+  }
+
+  @Test
+  void setOwnerMenolakNull() {
+    Wallet wallet = new Wallet();
+
+    assertThrows(IllegalArgumentException.class, () -> wallet.setOwner(null));
+  }
+
+  private Class<? extends Throwable> resolveExpectedException(String exceptionType) {
+    return switch (exceptionType) {
+      case "IllegalArgumentException" -> IllegalArgumentException.class;
+      case "InsufficientFundsException" -> Wallet.InsufficientFundsException.class;
+      default -> throw new IllegalArgumentException("exceptionType tidak dikenali: " + exceptionType);
+    };
+  }
+}
+\end{lstlisting}
+
+\par Berdasarkan Listing \ref{lst:wallettest-parameterized}, perubahan yang saya lakukan pada pertemuan ini dapat dibandingkan dengan implementasi lama sebagai berikut:
+\begin{enumerate}
+  \item \textbf{Perubahan fokus dari struktur test ke sumber data test}. Pada kode lama, pengujian lebih banyak ditulis secara langsung di masing-masing method. Pada implementasi sekarang, fokusnya berpindah ke penyediaan data uji otomatis melalui \textbf{@ValueSource}, \textbf{@CsvFileSource}, dan \textbf{@MethodSource}.
+  \item \textbf{Perubahan tipe data owner}. Pada implementasi lama, \textbf{owner} masih berupa \textbf{String}. Sekarang \textbf{owner} diubah menjadi objek \textbf{Owner}, sehingga pengujian tidak lagi sekadar memeriksa nama pemilik, tetapi juga struktur objek yang mewakili identitas pemilik dompet.
+  \item \textbf{Penambahan operasi kas per nominal tunggal}. Pada implementasi lama, operasi kas hanya berbentuk \textbf{addCash(List<Double> cash)} dan \textbf{withdrawCash(List<Double> cash)}. Sekarang ditambahkan \textbf{addCash(double amount)} dan \textbf{withdrawCash(double amount)} agar lebih sesuai untuk pengujian \textit{parameterized}.
+  \item \textbf{Pemindahan data uji ke sumber parameter}. Jika sebelumnya data uji banyak ditulis langsung di dalam body method test, sekarang data tertentu dipindahkan ke \textbf{@ValueSource}, ke file CSV, dan ke method pada kelas \textbf{Params}. Hal ini membuat isi method test menjadi lebih singkat dan lebih mudah dibaca.
+  \item \textbf{Penggunaan kelas Params yang sama untuk dua studi kasus}. Method pertama pada kelas \textbf{Params}, yaitu \textbf{provideParameters()}, tetap digunakan pada latihan di kelas \textbf{KalkulatorTest}. Sedangkan method kedua, yaitu \textbf{provideOwners()}, digunakan pada kelas \textbf{WalletTest}.
+\end{enumerate}
+
+\subsection{Data Pengujian CSV}
+\par Untuk skenario \textit{withdraw cash}, saya memisahkan data uji ke dalam dua file CSV sesuai yang diminta soalnya, yaitu satu file untuk kondisi valid dan satu file untuk kondisi tidak valid. File \textbf{wallet-withdraw-valid.csv} \ref{lst:wallet-withdraw-valid-csv} berisi data dengan format \textit{deposit}, \textit{withdraw}, dan \textit{expectedTotal} yang menunjukkan jumlah uang yang didepositkan, jumlah uang yang ditarik, dan total uang yang diharapkan setelah penarikan. Sementara itu, file \textbf{wallet-withdraw-invalid.csv} \ref{lst:wallet-withdraw-invalid-csv} berisi data dengan format \textit{initialDeposit}, \textit{withdraw}, dan \textit{exceptionType} yang menunjukkan jumlah uang awal yang didepositkan, jumlah uang yang ditarik, dan jenis exception yang diharapkan dilempar ketika penarikan dilakukan.
+
+\begin{lstlisting}[caption={Isi file wallet-withdraw-valid.csv}, label={lst:wallet-withdraw-valid-csv}]
+deposit,withdraw,expectedTotal
+10000,1000,9000
+20000,5000,15000
+50000,25000,25000
+100000,100000,0
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Isi file wallet-withdraw-invalid.csv}, label={lst:wallet-withdraw-invalid-csv}]
+initialDeposit,withdraw,exceptionType
+10000,15000,InsufficientFundsException
+10000,0,IllegalArgumentException
+10000,-1000,IllegalArgumentException
+0,100,InsufficientFundsException
+\end{lstlisting}
+
+\subsection{Hasil Akhir Pengujian}
+\par Setelah seluruh perubahan selesai dilakukan, semua skenario pengujian pada kelas \textbf{WalletTest} berhasil dijalankan dengan baik. Pengujian mencakup validasi penambahan uang tunai dengan angka positif, penolakan angka negatif, pengurangan uang tunai berdasarkan data CSV valid, penanganan data \textit{withdraw} tidak valid, serta pengujian \textbf{setOwner()} dan constructor menggunakan objek \textbf{Owner} dari kelas \textbf{Params}. Hasil ini menunjukkan bahwa \textit{parameterized test} berhasil diterapkan dan tetap menjaga perilaku kelas \textbf{Wallet} sesuai kebutuhan.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{resource/hasil-parameterized-wallettest.png}
+  \caption{Hasil eksekusi parameterized test pada kelas \textbf{WalletTest} menunjukkan seluruh test berhasil dijalankan}
+  \label{fig:hasil-parameterized-wallettest}
+\end{figure}
+
+\par Berdasarkan Gambar \ref{fig:hasil-parameterized-wallettest}, seluruh data uji yang dimasukkan melalui \textbf{@ValueSource}, \textbf{@CsvFileSource}, dan \textbf{@MethodSource} berhasil dieksekusi tanpa kegagalan. Hal ini memperlihatkan bahwa struktur pengujian yang baru tidak hanya lebih ringkas dibanding implementasi lama, tetapi juga tetap dapat memverifikasi logika program secara benar. Dengan demikian, penerapan \textit{parameterized test} pada studi kasus \textbf{Wallet} dapat dianggap berhasil.
 
 \section{Kesimpulan}
+\par Berdasarkan hasil praktikum pertemuan ini, saya dapat memahami bahwa \textit{parameterized test} pada JUnit 5 sangat berguna untuk menyederhanakan penulisan unit test yang memiliki pola pengujian serupa tetapi menggunakan data berbeda. Pendekatan ini membuat data uji dapat dipisahkan dari logika assertion sehingga kode pada kelas \textbf{WalletTest} menjadi lebih ringkas, lebih mudah dibaca, dan lebih mudah dikembangkan ketika jumlah skenario pengujian bertambah.
+
+\par Selain itu, saya juga memahami bahwa penerapan \textit{parameterized test} pada testing sering kali perlu didukung oleh penyesuaian pada kelas yang diuji. Pada praktikum ini, penyesuaian tersebut terlihat pada perubahan kelas \textbf{Wallet}, yaitu pergantian tipe \textbf{owner} dari \textbf{String} menjadi \textbf{Owner}, penambahan operasi kas berbasis nominal tunggal, dan penambahan exception untuk kondisi saldo tidak cukup. Dengan dukungan kelas \textbf{Owner}, kelas \textbf{Params}, dan data CSV yang telah disiapkan, seluruh pengujian berhasil dijalankan dengan baik. Hal ini menunjukkan bahwa implementasi \textit{parameterized test} pada studi kasus \textbf{Wallet} telah berhasil dilakukan.
 
 \end{document}
