@@ -4,6 +4,7 @@
 \usepackage[utf8]{inputenc}     % untuk karakter UTF-8
 \usepackage[T1]{fontenc}        % encoding font
 \usepackage{graphicx}
+\usepackage{array}
 \usepackage{titling}
 \usepackage{titlesec}
 \usepackage[backend=biber,style=ieee]{biblatex}
@@ -12,7 +13,7 @@
 \usepackage{geometry}           % untuk margin
 \usepackage{setspace}           % untuk spasi baris
 \usepackage{fancyhdr}           % untuk header/footer
-\usepackage{hyperref}           % untuk link dan bookmark
+\usepackage[hypertexnames=false]{hyperref} % untuk link dan bookmark (hindari duplicate destination)
 \usepackage{listings}           % untuk code Python
 \usepackage{xcolor}             % untuk warna
 \usepackage{float}              % untuk posisi gambar
@@ -84,8 +85,8 @@
 }
 
 % Info dokumen
-\newcommand{\Pertemuan}{3}
-\newcommand{\Materi}{Routing dan Controller pada Laravel}
+\newcommand{\Pertemuan}{5}
+\newcommand{\Materi}{Mocking Object Using Mockito}
 \title{Laporan Praktikum \\ Pengujian Perangkat Lunak\\
 Pertemuan \Pertemuan\\
 \Materi}
@@ -118,7 +119,7 @@ Pertemuan \Pertemuan\\
 \begin{minipage}{0.8\textwidth}
 \raggedright
 \begin{large}
-\begin{tabular}{@{}l@{\hspace{1.5em}}c@{\hspace{1.5em}}p{\textwidth}@{}}
+\begin{tabular}{@{}l@{\hspace{1.5em}}c@{\hspace{1.5em}}>{\raggedright\arraybackslash}p{0.55\linewidth}@{}}
 Nama & : & \NamaMahasiswa \\
 NIM & : & \NIMMahasiswa \\
 Kelas & : & \KelasMahasiswa \\
@@ -204,8 +205,8 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Tujuan Praktikum}
 \begin{enumerate}
-    \item 
-    \item 
+  \item Mahasiswa mampu memahami konsep \textit{mock} dan \textit{stub} pada pengujian unit serta mengimplementasikannya menggunakan Mockito.
+  \item Mahasiswa mampu menerapkan verifikasi interaksi (\textit{verify}, \textit{never}, \textit{times}) dan verifikasi urutan pemanggilan menggunakan \textit{InOrder}.
 \end{enumerate}
 
 %contoh gambar dan kode
@@ -223,8 +224,595 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Hasil dan Pembahasan}
 \subsection{Persiapan Praktikum}
-\subsection{Hasil}
+\par Pada praktikum pertemuan ini, saya berfokus pada penerapan \textit{mocking object} menggunakan Mockito untuk studi kasus modul \textbf{Library}. Proyek yang digunakan merupakan proyek Maven berbasis Java dan JUnit 5. Langkah awal yang saya lakukan adalah memastikan dependensi pengujian (JUnit 5) tetap tersedia pada \textbf{pom.xml}, kemudian menjalankan seluruh pengujian melalui fitur \textit{Run Test} di VS Code maupun melalui perintah \textbf{mvn test} untuk memastikan konfigurasi proyek berjalan dengan baik.
+
+\par Untuk mengaktifkan Mockito pada proyek Maven ini, saya menambahkan dua dependensi pada \textbf{pom.xml} dengan scope \textbf{test}, yaitu \textbf{mockito-core} sebagai library utama Mockito dan \textbf{mockito-junit-jupiter} untuk integrasi Mockito dengan JUnit 5 (agar anotasi seperti \textbf{@Mock}, \textbf{@InjectMocks}, serta \textbf{@ExtendWith(MockitoExtension.class)} dapat digunakan dengan lancar pada kelas pengujian).
+
+\par Berikut adalah isi file \textbf{pom.xml} yang digunakan pada proyek, termasuk dependensi Mockito yang ditambahkan di kode \ref{lst:pom-xml-mockito} berikut ini.
+
+\begin{lstlisting}[caption={Konfigurasi pom.xml (JUnit 5 dan Mockito)}, label={lst:pom-xml-mockito}]
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example</groupId>
+  <artifactId>pertemuan1</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <junit.jupiter.version>5.10.5</junit.jupiter.version>
+  </properties>
+
+  <dependencies>
+    <!-- Source: https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Source: https://mvnrepository.com/artifact/org.mockito/mockito-core -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>5.20.0</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Source: https://mvnrepository.com/artifact/org.mockito/mockito-junit-jupiter -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <version>5.20.0</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.2.5</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+\end{lstlisting}
+
+\par Setelah lingkungan pengujian siap, saya menambahkan beberapa fitur pada \textbf{LibraryModel} dan \textbf{LibraryControl} sesuai kebutuhan soal: pengecekan ketersediaan buku berdasarkan \textbf{id}, proses peminjaman buku (dengan dua skenario kondisi), serta penambahan layanan notifikasi \textbf{NotificationService}. Pada sisi pengujian, saya menambahkan unit test baru pada \textbf{LibraryTest} untuk menguji ketersediaan buku, memverifikasi pemanggilan fungsi peminjaman (dipanggil atau tidak dipanggil), serta memverifikasi urutan pemanggilan fungsi menggunakan \textbf{InOrder}.
+
+\subsection{Soal Praktikum}
+\par Soal yang diminta pada pertemuan ini adalah sebagai berikut:
+\begin{enumerate}
+  \item Tambahkan fungsi untuk cek ketersediaan buku pada controller dan model. Cek ketersediaan buku berdasarkan id. Buatlah test method untuk method cek ketersediaan pada controller.
+  \item Tambahkan class model \textbf{NotificationService} yang akan mengirimkan notifikasi apabila buku berhasil dipinjam atau dikembalikan. Urutan proses yang diharapkan (eksplor penggunaan fungsi \textbf{InOrder} untuk memastikan urutan pemanggilannya sesuai):
+  \begin{enumerate}[label=\arabic*.]
+  \item getAllBooks()
+  \item Peminjaman(title, username)
+  \item sendNotification(username, title)
+  \end{enumerate}
+  \item Meminjam buku (id buku). Buat 2 test scenario:
+  \begin{itemize}
+  \item Apabila tidak sedang dipinjam maka fungsi peminjaman buku akan dipanggil.
+  \item Apabila buku sedang dipinjam, lakukan verifikasi bahwa fungsi peminjaman buku tidak dipanggil.
+  \end{itemize}
+\end{enumerate}
+
+\subsection{Implementasi Sebelum Perubahan}
+\par Sebelum mengerjakan soal, modul \textbf{Library} hanya memiliki fitur pencarian penulis buku berdasarkan judul melalui method \textbf{SearchBooksAuthor} di \textbf{LibraryControl}. Kelas \textbf{Book} hanya menyimpan \textbf{id}, \textbf{title}, dan \textbf{author}. Pada \textbf{LibraryModel} hanya terdapat method \textbf{getAllBooks()}\allowbreak dan \textbf{saveSearch\allowbreak Keyword()}. Sementara itu, \textbf{LibraryTest} hanya berisi pengujian Mockito untuk memverifikasi \textbf{getAllBooks()} dipanggil. Selain itu, memastikan \textbf{saveSearch\allowbreak Keyword()} tidak dipanggil saat buku tidak ditemukan.
+
+\begin{lstlisting}[language=Java, caption={Kode Book sebelum perubahan}, label={lst:book-before}]
+package com.example;
+
+public class Book {
+
+  private int id;
+  private String title;
+  private String author;
+
+  public Book(int id, String title, String author) {
+    this.id = id;
+    this.title = title;
+    this.author = author;
+  }
+
+  // Getters
+  public int getId() {
+    return id;
+  }
+
+  public String getTitle() {
+    return title;
+  }
+
+  public String getAuthor() {
+    return author;
+  }
+
+  // Setters
+  public void setId(int id) {
+    this.id = id;
+  }
+
+  public void setTitle(String title) {
+    this.title = title;
+  }
+    
+  public void setAuthor(String author) {
+    this.author = author;
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Java, caption={Kode LibraryControl sebelum perubahan}, label={lst:librarycontrol-before}]
+package com.example;
+
+import java.util.List;
+
+public class LibraryControl {
+
+  private final LibraryModel model;
+
+  public LibraryControl(LibraryModel model) {
+    this.model = model;
+  }
+
+  public String SearchBooksAuthor(String tittle) {
+    List<Book> books = model.getAllBooks();
+    String result = "";
+    for (Book book : books) {
+      if (book.getTitle().equals(tittle)) {
+        model.saveSearchKeyword(tittle);
+        result = book.getAuthor();
+      }
+
+      // else result = "Book not found";
+    }
+    return result;
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Java, caption={Kode LibraryModel sebelum perubahan}, label={lst:librarymodel-before}]
+package com.example;
+
+import java.util.List;
+import java.util.ArrayList;
+
+public class LibraryModel {
+
+  public List<Book> getAllBooks() {
+
+    List<Book> allBooks = new ArrayList<>();
+    // Search in database
+    return allBooks;
+  }
+
+  void saveSearchKeyword(String keyword) {
+    // Save to db
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Java, caption={Kode LibraryTest sebelum perubahan}, label={lst:librarytest-before}]
+package com.example;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+public class LibraryTest {
+
+  @Mock
+  private LibraryModel bookModel;
+
+  @InjectMocks
+  private LibraryControl control;
+
+  @Test
+  public void testSearchBooksAuthor() {
+    List<Book> books = new ArrayList<>();
+    books.add(new Book(1, "Intro OOP", "divi"));
+    books.add(new Book(2, "Pengujian PL itu mudah", "putri"));
+
+    // stub
+    Mockito.when(bookModel.getAllBooks()).thenReturn(books);
+
+    Assertions.assertEquals("divi", control.SearchBooksAuthor("Intro OOP"));
+
+    // mock
+    Mockito.verify(bookModel, Mockito.times(1)).getAllBooks();
+  }
+
+  @Test
+  public void testSearchBooksAuthor_withNever() {
+
+    List<Book> books = new ArrayList<>();
+    books.add(new Book(1, "Intro OOP", "divi"));
+        
+    // stub
+    Mockito.when(bookModel.getAllBooks()).thenReturn(books);
+    control.SearchBooksAuthor("Unknown Book");
+
+    Mockito.verify(bookModel, Mockito.never()).saveSearchKeyword(Mockito.anyString());
+  }
+}
+\end{lstlisting}
+
+\subsection{Implementasi Setelah Perubahan (Sesuai Soal)}
+\par Setelah mengerjakan soal, saya menambahkan perilaku baru pada modul \textbf{Library} yang berfokus pada tiga hal: 1. pengecekan ketersediaan buku berdasarkan \textbf{id}, 2. proses peminjaman buku dengan dua skenario (dipanggil/tidak dipanggil), dan 3. pengiriman notifikasi yang diverifikasi urutannya menggunakan \textbf{InOrder}.
+
+\par Secara ringkas, tambahan yang saya lakukan adalah:
+\begin{enumerate}
+  \item \textbf{Book}: ditambahkan atribut status \textbf{borrowed} agar buku dapat ditandai sedang dipinjam atau tidak.
+  \item \textbf{LibraryModel}: akan ditambahkan method \textbf{getBookById}, \textbf{isBookAvailable}, \textbf{borrowBook}, dan \textbf{returnBook} (sebagai titik interaksi yang diverifikasi pada unit test).
+  \item \textbf{LibraryControl}: akan ditambahkan method \textbf{checkBookAvail\allowbreak ability} dan \textbf{borrowBook\allowbreak ById}, serta integrasi \textbf{NotificationService} agar notifikasi bisa dikirim setelah peminjaman/pengembalian berhasil.
+  \item \textbf{LibraryTest}: akan ditambahkan 4 unit test baru untuk memanfaatkan Mockito sebagai \textit{stub} dan \textit{mock} sekaligus, termasuk verifikasi urutan pemanggilan dengan \textbf{InOrder}.
+\end{enumerate}
+
+\subsubsection{Identifikasi Stub dan Mock pada Kasus Ini}
+\par Pada Mockito, \textit{stub} digunakan untuk mengatur perilaku objek dependency sehingga test dapat berjalan deterministik. Stub pada kasus ini adalah:
+\begin{enumerate}
+  \item \textbf{Stub ketersediaan buku}: \textbf{when(bookModel.isBookAvailable(1)).}\\
+  \textbf{thenReturn(true)}.
+  \item \textbf{Stub daftar buku}: \textbf{when(bookModel.getAllBooks()).thenReturn(books)}.
+\end{enumerate}
+
+\par Sementara itu, \textit{mock} digunakan untuk memverifikasi interaksi terhadap dependency. Mock pada kasus ini adalah:
+\begin{enumerate}
+  \item \textbf{verify(times)} untuk memastikan method dipanggil: \textbf{verify(bookModel, times(1)).} \textbf{borrowBook(...)}.
+  \item \textbf{verify(never)} untuk memastikan method tidak dipanggil: \textbf{verify(bookModel,}\\
+  \textbf{never()).} \textbf{borrowBook(...)}.
+  \item \textbf{InOrder} untuk memverifikasi urutan pemanggilan dependency: \textbf{getAllBooks} $\rightarrow$ \textbf{borrowBook} $\rightarrow$ \textbf{sendNotification}.
+\end{enumerate}
+
+\subsubsection{Kode Setelah Perubahan}
+\par Berikut adalah kode setelah perubahan yang terkait langsung dengan kebutuhan soal.
+
+\begin{lstlisting}[language=Java, caption={Book setelah perubahan (penambahan status borrowed)}, label={lst:book-after}]
+package com.example;
+
+public class Book {
+
+  private int id;
+  private String title;
+  private String author;
+  private boolean borrowed;
+
+  public Book(int id, String title, String author) {
+    this.id = id;
+    this.title = title;
+    this.author = author;
+    this.borrowed = false;
+  }
+
+  public Book(int id, String title, String author, boolean borrowed) {
+    this.id = id;
+    this.title = title;
+    this.author = author;
+    this.borrowed = borrowed;
+  }
+
+  // Getters
+  public int getId() {
+    return id;
+  }
+
+  public String getTitle() {
+    return title;
+  }
+
+  public String getAuthor() {
+    return author;
+  }
+
+  public boolean isBorrowed() {
+    return borrowed;
+  }
+
+  // Setters
+  public void setId(int id) {
+    this.id = id;
+  }
+
+  public void setTitle(String title) {
+    this.title = title;
+  }
+    
+  public void setAuthor(String author) {
+    this.author = author;
+  }
+
+  public void setBorrowed(boolean borrowed) {
+    this.borrowed = borrowed;
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Java, caption={NotificationService yang ditambahkan (sesuai soal)}, label={lst:notificationservice}]
+package com.example;
+
+public class NotificationService {
+
+  public void sendNotification(String username, String title) {
+    // Send a notification (e.g., email, push notification)
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Java, caption={LibraryModel setelah perubahan (penambahan cek availability dan borrow/return)}, label={lst:librarymodel-after}]
+package com.example;
+
+import java.util.List;
+import java.util.ArrayList;
+
+public class LibraryModel {
+
+  public List<Book> getAllBooks() {
+
+    List<Book> allBooks = new ArrayList<>();
+    // Search in database
+    return allBooks;
+  }
+
+  public Book getBookById(int bookId) {
+    for (Book book : getAllBooks()) {
+      if (book.getId() == bookId) {
+        return book;
+      }
+    }
+    return null;
+  }
+
+  public boolean isBookAvailable(int bookId) {
+    Book book = getBookById(bookId);
+    return book != null && !book.isBorrowed();
+  }
+
+  public void borrowBook(String title, String username) {
+    // Persist borrowing transaction (e.g., update DB)
+  }
+
+  public void returnBook(String title, String username) {
+    // Persist return transaction (e.g., update DB)
+  }
+
+  void saveSearchKeyword(String keyword) {
+    // Save to db
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Java, caption={LibraryControl setelah perubahan (cek availability, borrow by id, dan notifikasi)}, label={lst:librarycontrol-after}]
+package com.example;
+
+import java.util.List;
+
+public class LibraryControl {
+
+  private final LibraryModel model;
+  private final NotificationService notificationService;
+
+  public LibraryControl(LibraryModel model) {
+    this(model, null);
+  }
+
+  public LibraryControl(LibraryModel model, NotificationService notificationService) {
+    this.model = model;
+    this.notificationService = notificationService;
+  }
+
+  public String SearchBooksAuthor(String tittle) {
+    List<Book> books = model.getAllBooks();
+    String result = "";
+    for (Book book : books) {
+      if (book.getTitle().equals(tittle)) {
+        model.saveSearchKeyword(tittle);
+        result = book.getAuthor();
+      }
+
+      // else result = "Book not found";
+    }
+    return result;
+  }
+
+  public boolean checkBookAvailability(int bookId) {
+    return model.isBookAvailable(bookId);
+  }
+
+  public boolean borrowBookById(int bookId, String username) {
+    List<Book> books = model.getAllBooks();
+    Book bookToBorrow = null;
+    for (Book book : books) {
+      if (book.getId() == bookId) {
+        bookToBorrow = book;
+        break;
+      }
+    }
+
+    if (bookToBorrow == null || bookToBorrow.isBorrowed()) {
+      return false;
+    }
+
+    String title = bookToBorrow.getTitle();
+    model.borrowBook(title, username);
+
+    if (notificationService != null) {
+      notificationService.sendNotification(username, title);
+    }
+
+    return true;
+  }
+
+  public boolean returnBookById(int bookId, String username) {
+    List<Book> books = model.getAllBooks();
+    Book bookToReturn = null;
+    for (Book book : books) {
+      if (book.getId() == bookId) {
+        bookToReturn = book;
+        break;
+      }
+    }
+
+    if (bookToReturn == null || !bookToReturn.isBorrowed()) {
+      return false;
+    }
+
+    String title = bookToReturn.getTitle();
+    model.returnBook(title, username);
+
+    if (notificationService != null) {
+      notificationService.sendNotification(username, title);
+    }
+
+    return true;
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Java, caption={LibraryTest setelah perubahan (tambahan test untuk cek availability, borrow scenario, dan InOrder)}, label={lst:librarytest-after}]
+package com.example;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+public class LibraryTest {
+
+  @Mock
+  private LibraryModel bookModel;
+
+  @Mock
+  private NotificationService notificationService;
+
+  @InjectMocks
+  private LibraryControl control;
+
+  @Test
+  public void testSearchBooksAuthor() {
+    List<Book> books = new ArrayList<>();
+    books.add(new Book(1, "Intro OOP", "divi"));
+    books.add(new Book(2, "Pengujian PL itu mudah", "putri"));
+
+    // stub
+    Mockito.when(bookModel.getAllBooks()).thenReturn(books);
+
+    Assertions.assertEquals("divi", control.SearchBooksAuthor("Intro OOP"));
+
+    // mock
+    Mockito.verify(bookModel, Mockito.times(1)).getAllBooks();
+  }
+
+  @Test
+  public void testSearchBooksAuthor_withNever() {
+
+    List<Book> books = new ArrayList<>();
+    books.add(new Book(1, "Intro OOP", "divi"));
+        
+    // stub
+    Mockito.when(bookModel.getAllBooks()).thenReturn(books);
+    control.SearchBooksAuthor("Unknown Book");
+
+    Mockito.verify(bookModel, Mockito.never()).saveSearchKeyword(Mockito.anyString());
+  }
+
+  @Test
+  public void testCheckBookAvailability_controller() {
+    // stub
+    Mockito.when(bookModel.isBookAvailable(1)).thenReturn(true);
+
+    Assertions.assertTrue(control.checkBookAvailability(1));
+
+    // mock
+    Mockito.verify(bookModel, Mockito.times(1)).isBookAvailable(1);
+  }
+
+  @Test
+  public void testBorrowBookById_whenNotBorrowed_callsBorrow() {
+    List<Book> books = new ArrayList<>();
+    books.add(new Book(1, "Intro OOP", "divi", false));
+
+    // stub
+    Mockito.when(bookModel.getAllBooks()).thenReturn(books);
+
+    boolean borrowed = control.borrowBookById(1, "alice");
+    Assertions.assertTrue(borrowed);
+
+    // mock + verify
+    Mockito.verify(bookModel, Mockito.times(1)).borrowBook("Intro OOP", "alice");
+  }
+
+  @Test
+  public void testBorrowBookById_whenBorrowed_doesNotCallBorrow() {
+    List<Book> books = new ArrayList<>();
+    books.add(new Book(1, "Intro OOP", "divi", true));
+
+    // stub
+    Mockito.when(bookModel.getAllBooks()).thenReturn(books);
+
+    boolean borrowed = control.borrowBookById(1, "alice");
+    Assertions.assertFalse(borrowed);
+
+    // verify borrowBook tidak dipanggil
+    Mockito.verify(bookModel, Mockito.never()).borrowBook(Mockito.anyString(), Mockito.anyString());
+    Mockito.verify(notificationService, Mockito.never()).sendNotification(Mockito.anyString(), Mockito.anyString());
+  }
+
+  @Test
+  public void testBorrowBookById_inOrder_getAllBooks_borrow_sendNotification() {
+    List<Book> books = new ArrayList<>();
+    books.add(new Book(1, "Intro OOP", "divi", false));
+
+    // stub
+    Mockito.when(bookModel.getAllBooks()).thenReturn(books);
+
+    boolean borrowed = control.borrowBookById(1, "alice");
+    Assertions.assertTrue(borrowed);
+
+    InOrder inOrder = Mockito.inOrder(bookModel, notificationService);
+    inOrder.verify(bookModel).getAllBooks();
+    inOrder.verify(bookModel).borrowBook("Intro OOP", "alice");
+    inOrder.verify(notificationService).sendNotification("alice", "Intro OOP");
+
+    inOrder.verifyNoMoreInteractions();
+  }
+}
+\end{lstlisting}
+
+\subsection{Hasil Akhir Pengujian}
+\par Setelah seluruh perubahan diimplementasikan, seluruh skenario pengujian pada kelas \textbf{LibraryTest} berhasil dijalankan. Pengujian mencakup verifikasi \textbf{checkBookAvailability} pada controller, dua skenario peminjaman buku (dipanggil/tidak dipanggil), dan verifikasi urutan pemanggilan dependency menggunakan \textbf{InOrder}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{resource/hasil-mockito-librarytest.png}
+  \caption{Hasil eksekusi unit test pada modul \textbf{Library} menunjukkan seluruh test berhasil dijalankan}
+  \label{fig:hasil-mockito-librarytest}
+\end{figure}
 
 \section{Kesimpulan}
+\par Berdasarkan hasil praktikum pertemuan ini, saya memahami bahwa Mockito dapat digunakan untuk memisahkan pengujian unit dari ketergantungan eksternal dengan cara membuat \textit{mock} dan \textit{stub}. Dengan pendekatan ini, perilaku dependency seperti \textbf{LibraryModel} dan \textbf{NotificationService} dapat dikendalikan melalui stub (\textbf{when}--\textbf{thenReturn}), lalu interaksinya dapat diverifikasi melalui \textbf{verify}, \textbf{times}, dan \textbf{never}.
+
+\par Selain itu, saya juga memahami bahwa pengujian tidak hanya memeriksa nilai keluaran, tetapi juga bisa memeriksa interaksi dan urutan proses. Pada studi kasus ini, fitur \textbf{InOrder} digunakan untuk memastikan urutan pemanggilan \textbf{getAllBooks()} $\rightarrow$ \textbf{borrowBook(title, username)} $\rightarrow$ \textbf{sendNotification(username, title)} sesuai dengan kebutuhan soal. Hasil pengujian menunjukkan seluruh skenario berhasil dijalankan sehingga implementasi fitur baru pada modul \textbf{Library} dapat dianggap berhasil.
 
 \end{document}
