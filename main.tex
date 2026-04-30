@@ -4,6 +4,7 @@
 \usepackage[utf8]{inputenc}     % untuk karakter UTF-8
 \usepackage[T1]{fontenc}        % encoding font
 \usepackage{graphicx}
+\usepackage{array}
 \usepackage{titling}
 \usepackage{titlesec}
 \usepackage[backend=biber,style=ieee]{biblatex}
@@ -12,7 +13,7 @@
 \usepackage{geometry}           % untuk margin
 \usepackage{setspace}           % untuk spasi baris
 \usepackage{fancyhdr}           % untuk header/footer
-\usepackage{hyperref}           % untuk link dan bookmark
+\usepackage[hypertexnames=false]{hyperref} % untuk link dan bookmark (hindari duplicate destination)
 \usepackage{listings}           % untuk code Python
 \usepackage{xcolor}             % untuk warna
 \usepackage{float}              % untuk posisi gambar
@@ -84,8 +85,8 @@
 }
 
 % Info dokumen
-\newcommand{\Pertemuan}{3}
-\newcommand{\Materi}{Routing dan Controller pada Laravel}
+\newcommand{\Pertemuan}{7}
+\newcommand{\Materi}{Selenium}
 \title{Laporan Praktikum \\ Pengujian Perangkat Lunak\\
 Pertemuan \Pertemuan\\
 \Materi}
@@ -118,7 +119,7 @@ Pertemuan \Pertemuan\\
 \begin{minipage}{0.8\textwidth}
 \raggedright
 \begin{large}
-\begin{tabular}{@{}l@{\hspace{1.5em}}c@{\hspace{1.5em}}p{\textwidth}@{}}
+\begin{tabular}{@{}l@{\hspace{1.5em}}c@{\hspace{1.5em}}>{\raggedright\arraybackslash}p{0.55\linewidth}@{}}
 Nama & : & \NamaMahasiswa \\
 NIM & : & \NIMMahasiswa \\
 Kelas & : & \KelasMahasiswa \\
@@ -204,8 +205,8 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Tujuan Praktikum}
 \begin{enumerate}
-    \item 
-    \item 
+    \item Mahasiswa mampu memahami kakas bantu pengujian antarmuka
+    \item Mahasiswa mampu mengimplementasikan kode dasar pengujian antarmuka menggunakan kakas bantu
 \end{enumerate}
 
 %contoh gambar dan kode
@@ -223,8 +224,198 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Hasil dan Pembahasan}
 \subsection{Persiapan Praktikum}
-\subsection{Hasil}
+\par Pada praktikum pertemuan ini, studi kasus yang digunakan adalah pengujian fitur \textit{login} pada website \textbf{SauceDemo} (\url{https://www.saucedemo.com/}) menggunakan Selenium WebDriver dan JUnit 5. Proyek pengujian dibuat dalam bentuk proyek Maven berbasis Java dengan versi compiler \textbf{JDK 17}.
+
+\subsubsection{Menentukan Dependensi Pengujian}
+\par Langkah awal yang saya lakukan adalah mencari dependensi yang dibutuhkan melalui MVN Repository. Berdasarkan hasil pencarian pada Gambar~\ref{fig:mvn-junit}, dependensi pengujian yang digunakan adalah \textbf{JUnit Jupiter (Aggregator)} agar fitur \textit{parameterized test} dapat digunakan tanpa menambah banyak artefak secara manual. Selanjutnya, berdasarkan Gambar~\ref{fig:mvn-selenium}, saya menggunakan dependensi \textbf{Selenium Java} untuk mengakses Selenium WebDriver dan driver browser.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{resource/dependensi-junit.png}
+  \caption{Hasil pencarian dependensi JUnit Jupiter pada MVN Repository}
+  \label{fig:mvn-junit}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{resource/selenium-java.png}
+  \caption{Hasil pencarian dependensi Selenium Java pada MVN Repository}
+  \label{fig:mvn-selenium}
+\end{figure}
+
+\subsubsection{Konfigurasi pom.xml}
+\par Setelah menentukan dependensi, saya menambahkan konfigurasi ke file \textbf{pom.\allowbreak xml}. Isi \textbf{pom.\allowbreak xml} yang digunakan pada proyek dapat dilihat pada Kode~\ref{lst:pom-xml-selenium}. Pada konfigurasi tersebut, \textbf{junit-jupiter} digunakan sebagai framework pengujian dengan scope \textbf{test}, sedangkan \textbf{selenium-java} digunakan untuk otomasi browser menggunakan Selenium WebDriver.
+
+\begin{lstlisting}[caption={Konfigurasi pom.xml (JUnit 5 dan Selenium)}, label={lst:pom-xml-selenium}]
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example</groupId>
+  <artifactId>demo</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+  </properties>
+
+  <dependencies>
+    <!-- Source: https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.5</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Source: https://mvnrepository.com/artifact/org.seleniumhq.selenium/selenium-java -->
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>4.34.0</version>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
+
+</project>
+\end{lstlisting}
+
+\subsubsection{Menentukan Data Uji untuk SauceDemo}
+\par Untuk menyusun data uji, saya mengacu pada halaman login SauceDemo yang menampilkan \textit{accepted usernames} dan password untuk semua user (lihat Gambar~\ref{fig:saucedemo-login}). Berdasarkan informasi tersebut, beberapa username valid yang digunakan pada pengujian adalah:
+\begin{itemize}
+  \item \texttt{standard\_user}
+  \item \texttt{problem\_user}
+  \item \texttt{performance\_glitch\_user}
+  \item \texttt{error\_user}
+  \item \texttt{visual\_user}
+\end{itemize}
+
+\par Selain itu, terdapat akun \texttt{locked\_out\_user} untuk skenario login gagal. Password yang digunakan untuk seluruh akun adalah \texttt{secret\_sauce}. Data tersebut kemudian dipakai sebagai parameter pada pengujian.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{resource/www.saucedemo.png}
+  \caption{Halaman login SauceDemo menampilkan daftar username valid dan password yang digunakan}
+  \label{fig:saucedemo-login}
+\end{figure}
+
+\subsection{Soal Praktikum}
+\par Soal praktikum pada pertemuan ini berfokus pada pembuatan otomatisasi pengujian antarmuka untuk proses login pada SauceDemo menggunakan Selenium dan JUnit 5. Skenario pengujian yang dikerjakan adalah sebagai berikut.
+\begin{enumerate}
+  \item Menguji login berhasil menggunakan beberapa \textit{username} valid (lihat Gambar~\ref{fig:saucedemo-login}) dengan password \texttt{secret\_sauce} dan memverifikasi bahwa halaman berpindah ke \texttt{/inventory.\allowbreak html}.
+  \item Menguji login gagal menggunakan akun \texttt{locked\_out\_user} (bukan karena password salah) dan memverifikasi bahwa halaman tidak berpindah ke \texttt{/inventory.\allowbreak html}.
+\end{enumerate}
+
+\subsection{Implementasi Pengujian}
+\subsubsection{Strategi Pengujian}
+\par Pengujian diimplementasikan menggunakan \textbf{JUnit 5} dengan memanfaatkan \textbf{@BeforeEach} untuk inisialisasi browser, \textbf{@AfterEach} untuk menutup browser, serta \textbf{@ParameterizedTest} untuk menjalankan skenario login berhasil pada beberapa data akun. Strategi ini membuat kode pengujian lebih ringkas karena satu method test dapat dieksekusi berulang untuk banyak username.
+
+\subsubsection{Kode Pengujian Selenium}
+\par Implementasi pengujian dapat dilihat pada Kode~\ref{lst:sauce-test}. Secara ringkas, test melakukan berikut ini: 
+\begin{enumerate}
+  \item membuka website SauceDemo,
+  \item menemukan elemen \textit{username}, \textit{password}, dan tombol login berdasarkan \textit{id},
+  \item mengisi kredensial,
+  \item menekan tombol login, lalu,
+  \item memeriksa URL akhir sebagai \textit{oracle} pengujian.
+\end{enumerate}
+
+\begin{lstlisting}[language=Java, caption={Kode pengujian Selenium pada SauceDemo (SauceTest.java)}, label={lst:sauce-test}]
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+
+public class SauceTest {
+
+  WebDriver driver;
+  WebElement username;
+  WebElement password;
+  WebElement loginButton;
+
+  @BeforeEach
+  public void setup() {
+    this.driver = new ChromeDriver();
+    this.driver.manage().window().maximize();
+    this.driver.get("https://www.saucedemo.com/");
+    this.username = this.driver.findElement(By.id("user-name"));
+    this.password = this.driver.findElement(By.id("password"));
+    this.loginButton = this.driver.findElement(By.id("login-button"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+    "standard_user", 
+    "problem_user", 
+    "performance_glitch_user",
+    "error_user",
+    "visual_user"
+  })
+  public void successLoginTest(String usernameValue) {
+    this.username = this.driver.findElement(By.id("user-name"));
+    this.password = this.driver.findElement(By.id("password"));
+    this.loginButton = this.driver.findElement(By.id("login-button"));
+
+    this.username.sendKeys(usernameValue);
+    this.password.sendKeys("secret_sauce");
+    this.loginButton.click();
+
+    // assert
+    String url = this.driver.getCurrentUrl();
+    String expected = "https://www.saucedemo.com/inventory.html";
+    assertEquals(expected, url);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+    "locked_out_user"
+  })
+  public void failedLoginNotBecauseWrongPassword(String usernameValue) {
+    this.username = this.driver.findElement(By.id("user-name"));
+    this.password = this.driver.findElement(By.id("password"));
+    this.loginButton = this.driver.findElement(By.id("login-button"));
+
+    this.username.sendKeys(usernameValue);
+    this.password.sendKeys("secret_sauce");
+    this.loginButton.click();
+
+    // assert
+    String url = this.driver.getCurrentUrl();
+    String expected = "https://www.saucedemo.com/inventory.html";
+    assertNotEquals(expected, url);
+  }
+
+  @AfterEach
+  public void tearDown() {
+    this.driver.quit();
+  }
+}
+\end{lstlisting}
+
+\subsubsection{Penjelasan Assertion}
+\par Pada method \textbf{successLoginTest} di Kode~\ref{lst:sauce-test}, pengujian memverifikasi keberhasilan login dengan membandingkan URL aktual dengan URL yang diharapkan menggunakan \textbf{assertEquals}. URL yang diharapkan adalah \texttt{https://www.saucedemo.com/inventory.html}. Sementara itu, pada method \textbf{failedLoginNotBecauseWrongPassword}, pengujian memverifikasi kegagalan login dengan memastikan URL aktual \textbf{tidak sama} dengan URL inventory menggunakan \textbf{assertNotEquals}.
+
+\subsection{Hasil Akhir Pengujian}
+\par Setelah seluruh skenario dijalankan, hasil pengujian menunjukkan seluruh test pada kelas \textbf{SauceTest} berhasil dieksekusi. Gambar~\ref{fig:hasil-run-selenium} memperlihatkan status \textit{pass} pada setiap eksekusi \textit{parameterized test}. Pada proses eksekusi juga muncul peringatan terkait CDP (\textit{Chrome DevTools Protocol}); namun peringatan tersebut tidak menghentikan eksekusi dan test tetap berjalan hingga selesai.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/hasil run.png}
+  \caption{Hasil eksekusi pengujian Selenium pada SauceDemo di VS Code menunjukkan seluruh test berhasil dijalankan}
+  \label{fig:hasil-run-selenium}
+\end{figure}
 
 \section{Kesimpulan}
+\par Berdasarkan hasil praktikum pertemuan ini, saya memahami bahwa Selenium WebDriver dapat digunakan untuk melakukan otomatisasi pengujian antarmuka web dengan cara mengontrol browser, mencari elemen halaman, dan melakukan aksi seperti mengisi form serta menekan tombol. Dengan bantuan JUnit 5, pengujian dapat disusun secara terstruktur menggunakan anotasi \textbf{@BeforeEach} dan \textbf{@AfterEach} untuk mengelola siklus hidup browser.
+
+\par Selain itu, penggunaan \textbf{@ParameterizedTest} memudahkan pengujian satu skenario yang sama menggunakan beberapa data uji tanpa menulis test berulang. Pada studi kasus SauceDemo, verifikasi dilakukan dengan membandingkan URL hasil login terhadap URL yang diharapkan (\texttt{/inventory.\allowbreak html}) sehingga dapat memastikan proses login berhasil atau gagal sesuai skenario.
 
 \end{document}
