@@ -77,6 +77,7 @@
 % Pengaturan hyperref
 \hypersetup{
     colorlinks=true,
+  hypertexnames=false,
     linkcolor=black,
     filecolor=magenta,
     urlcolor=blue,
@@ -84,8 +85,8 @@
 }
 
 % Info dokumen
-\newcommand{\Pertemuan}{3}
-\newcommand{\Materi}{Routing dan Controller pada Laravel}
+\newcommand{\Pertemuan}{6}
+\newcommand{\Materi}{Qase - Test Case Management Tool}
 \title{Laporan Praktikum \\ Pengujian Perangkat Lunak\\
 Pertemuan \Pertemuan\\
 \Materi}
@@ -204,8 +205,8 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Tujuan Praktikum}
 \begin{enumerate}
-    \item 
-    \item 
+  \item Mahasiswa mampu memahami definisi, fungsi, dan cara pembuatan skenario pengujian serta pelaporan bug  
+  \item Mahasiswa mampu membuat skenario pengujian serta pelaporan bug
 \end{enumerate}
 
 %contoh gambar dan kode
@@ -222,9 +223,147 @@ Dosen Pengampu & : & \DosenPengampu \\
 % \end{lstlisting}
 
 \section{Hasil dan Pembahasan}
+
 \subsection{Persiapan Praktikum}
-\subsection{Hasil}
+\subsubsection{Menentukan Studi Kasus dan Skenario Pengujian}
+\par Pada praktikum pertemuan ini, studi kasus yang digunakan adalah pengelolaan \textit{test case} dan \textit{test run} menggunakan \textbf{Qase} (\url{https://qase.io/}). Pengujian yang dikelola berfokus pada fitur \textbf{Modul Manajemen Mahasiswa} pada proyek \textbf{SIA UGN}. Tujuan penggunaan Qase pada praktikum ini adalah agar skenario pengujian yang sudah disusun dapat didokumentasikan secara terstruktur, dikelompokkan ke dalam \textit{suite}, kemudian dieksekusi melalui \textit{test run}.
+
+\subsubsection{Menyusun Rancangan Test Case}
+\par Sebelum memasukkan data ke Qase, saya terlebih dahulu menyusun rancangan \textit{test case} dalam bentuk tabel agar kolom-kolom penting seperti \textit{scenario}, \textit{precondition}, dan \textit{expected result} sudah jelas. Rancangan test case yang digunakan dapat dilihat pada Gambar~\ref{fig:rancangan-testcase}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/01-rancangan-testcase-manajemen-mahasiswa.png}
+  \caption{Rancangan test case untuk Modul Manajemen Mahasiswa}
+  \label{fig:rancangan-testcase}
+\end{figure}
+
+\subsubsection{Daftar Test Case yang Dikelola}
+\par Berdasarkan rancangan pada Gambar~\ref{fig:rancangan-testcase}, test case dibagi menjadi \textit{normal test} dan \textit{negative test}. Daftar test case yang dikelola pada praktikum ini adalah sebagai berikut.
+\begin{enumerate}
+  \item \textbf{Tambah Akun Mahasiswa}.
+  \item \textbf{Aktifkan atau Non-aktifkan Akun mahasiswa}.
+  \item \textbf{Tidak mengisi Form}.
+  \item \textbf{Mengisi Username yang sudah digunakan}.
+  \item \textbf{Mengisi email yang sudah digunakan}.
+\end{enumerate}
+
+\subsection{Akses Qase dan Proses Login}
+\subsubsection{Membuka Halaman Qase}
+\par Langkah pertama yang saya lakukan adalah membuka halaman utama Qase melalui browser. Tampilan awal Qase menampilkan informasi singkat mengenai platform dan tombol untuk masuk ke halaman login (lihat Gambar~\ref{fig:qase-landing}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/02-qase-landing-page.png}
+  \caption{Halaman awal Qase sebagai akses menuju fitur login}
+  \label{fig:qase-landing}
+\end{figure}
+
+\subsubsection{Masuk ke Halaman Login}
+\par Setelah menekan menu \textit{Log in}, Qase menampilkan halaman login yang menyediakan beberapa metode autentikasi, seperti email/password dan login menggunakan akun Google (lihat Gambar~\ref{fig:qase-login}). Pada praktikum ini saya menggunakan opsi \textbf{Continue with Google}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.80\textwidth]{resource/03-qase-login-page.png}
+  \caption{Halaman login Qase dengan opsi login menggunakan Google}
+  \label{fig:qase-login}
+\end{figure}
+
+\subsubsection{Otorisasi Google OAuth}
+\par Setelah memilih \textbf{Continue with Google}, muncul halaman konfirmasi OAuth untuk memberikan izin akses kepada Qase. Proses ini diperlukan agar Qase dapat melakukan autentikasi menggunakan identitas akun Google (lihat Gambar~\ref{fig:qase-oauth}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.90\textwidth]{resource/04-qase-google-oauth.png}
+  \caption{Halaman otorisasi Google OAuth saat login ke Qase}
+  \label{fig:qase-oauth}
+\end{figure}
+
+\subsubsection{Melengkapi Profil Awal}
+\par Pada login pertama, Qase meminta informasi profil seperti nama dan \textit{job title}. Data ini digunakan untuk konfigurasi awal \textit{workspace} dan identitas pengguna di dalam Qase. Contoh tampilan pengisian profil awal dapat dilihat pada Gambar~\ref{fig:qase-onboarding}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/05-qase-onboarding-profil.png}
+  \caption{Pengisian profil awal setelah login pertama pada Qase}
+  \label{fig:qase-onboarding}
+\end{figure}
+
+\subsection{Pembuatan Project pada Qase}
+\subsubsection{Mengakses Menu Projects}
+\par Setelah berhasil login, saya masuk ke menu \textbf{Projects} untuk melihat daftar proyek yang tersedia di \textit{workspace}. Pada halaman ini juga tersedia tombol \textbf{Create new project} untuk membuat proyek baru (lihat Gambar~\ref{fig:qase-projects}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/06-qase-projects-page.png}
+  \caption{Halaman Projects pada Qase}
+  \label{fig:qase-projects}
+\end{figure}
+
+\subsubsection{Membuat Project Baru (SIA UGN)}
+\par Proyek baru dibuat dengan menekan tombol \textbf{Create new project}. Pada form yang muncul, saya mengisi \textit{project name} \textbf{SIA UGN} dan \textit{project code} \textbf{SU}, serta memilih \textit{access type} \textbf{Private}. Tampilan form pembuatan project dapat dilihat pada Gambar~\ref{fig:qase-create-project}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.90\textwidth]{resource/07-qase-create-project.png}
+  \caption{Form pembuatan project baru pada Qase}
+  \label{fig:qase-create-project}
+\end{figure}
+
+\subsection{Penyusunan Suite untuk Repository Test Case}
+\subsubsection{Membuat Suite ``Manajemen Mahasiswa''}
+\par Setelah project dibuat, Qase menyediakan \textit{repository} untuk menyimpan kumpulan test case. Agar test case lebih terorganisasi, saya membuat \textit{suite} bernama \textbf{Manajemen Mahasiswa} dengan \textit{parent suite} \textit{Project root}. Pada suite ini saya menambahkan \textit{preconditions} \textbf{``sudah login''} agar sesuai dengan skenario pengujian pada rancangan. Proses pembuatan suite dapat dilihat pada Gambar~\ref{fig:qase-create-suite}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.90\textwidth]{resource/08-qase-create-suite.png}
+  \caption{Pembuatan suite untuk mengelompokkan test case berdasarkan modul}
+  \label{fig:qase-create-suite}
+\end{figure}
+
+\subsection{Pembuatan Test Case di Qase}
+\subsubsection{Memasukkan Test Case Berdasarkan Rancangan}
+\par Test case pada Gambar~\ref{fig:rancangan-testcase} kemudian dimasukkan ke dalam Qase secara manual melalui menu \textbf{Repository}. Pada pengisian test case, beberapa atribut yang saya perhatikan adalah \textit{Title}, \textit{Status}, \textit{Suite}, serta pengaturan \textit{Severity} dan \textit{Priority}. Pengelompokan menggunakan suite \textbf{Manajemen Mahasiswa} dilakukan agar test case mudah dicari saat pembuatan \textit{test run}.
+
+\subsubsection{Contoh Pengisian Form Test Case}
+\par Salah satu contoh test case yang saya buat adalah \textbf{``Aktifkan atau Non-aktifkan Akun mahasiswa''}. Pada halaman pembuatan test case, judul diisi sesuai skenario, suite dipilih \textbf{Manajemen Mahasiswa}, dan atribut lain dibiarkan \textit{default} (misalnya \textit{Severity} \textbf{Normal}). Contoh tampilan form pembuatan test case dapat dilihat pada Gambar~\ref{fig:qase-create-testcase}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/09-qase-create-test-case.png}
+  \caption{Contoh pengisian form pembuatan test case pada Qase}
+  \label{fig:qase-create-testcase}
+\end{figure}
+
+\subsection{Konfigurasi Environment Pengujian}
+\subsubsection{Menambahkan Environment}
+\par Agar eksekusi pengujian pada \textit{test run} memiliki konteks sistem yang diuji, Qase menyediakan fitur \textbf{Environments}. Pada praktikum ini saya menambahkan environment \textbf{Production} dengan \textit{slug} \textbf{prod} dan tipe \textbf{Static} yang menunjuk pada host \textbf{sia.trisuladana.com}. Tampilan form penambahan environment dapat dilihat pada Gambar~\ref{fig:qase-environment}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.90\textwidth]{resource/10-qase-create-environment.png}
+  \caption{Penambahan environment pada Qase untuk kebutuhan test run}
+  \label{fig:qase-environment}
+\end{figure}
+
+\subsection{Pembuatan dan Pelaksanaan Test Run}
+\subsubsection{Membuat Test Run}
+\par Setelah test case tersedia di repository, saya membuat \textit{test run} melalui menu \textbf{Test Runs}. Pada test run yang dibuat, Qase menampilkan daftar test case dari suite \textbf{Manajemen Mahasiswa} dengan status awal \textbf{Untested}. Selain itu, Qase juga menampilkan \textit{completion rate} untuk memantau progres eksekusi. Contoh tampilan test run dapat dilihat pada Gambar~\ref{fig:qase-test-run}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/11-qase-test-run.png}
+  \caption{Tampilan test run pada Qase untuk suite Manajemen Mahasiswa}
+  \label{fig:qase-test-run}
+\end{figure}
+
+\subsubsection{Pelaporan Hasil Eksekusi}
+\par Pada saat eksekusi, setiap test case dapat dibuka untuk mengisi \textit{result} seperti \textbf{Passed} atau \textbf{Failed} serta menambahkan catatan. Jika diperlukan, bukti seperti cuplikan layar atau video dapat dilampirkan sebagai dokumentasi. Alur ini membuat pelaporan hasil lebih konsisten karena \textit{expected result} pada rancangan (Gambar~\ref{fig:rancangan-testcase}) dapat digunakan sebagai \textit{oracle} untuk menentukan status hasil pengujian.
 
 \section{Kesimpulan}
+
+\par Berdasarkan praktikum pertemuan ini, saya memahami bahwa \textbf{Qase} dapat digunakan sebagai \textit{test case management tool} untuk menyusun, menyimpan, dan mengelola test case secara terstruktur dalam sebuah project. Pengelompokan menggunakan \textit{suite} membantu mengorganisasi test case berdasarkan modul, seperti suite \textbf{Manajemen Mahasiswa} pada project \textbf{SIA UGN}.
+
+\par Selain itu, fitur \textit{test run} pada Qase memudahkan proses eksekusi dan pencatatan hasil karena setiap test case memiliki status dan progres yang dapat dipantau. Dengan menambahkan \textit{environment}, pelaksanaan test run dapat memiliki konteks sistem yang diuji, serta dokumentasi hasil (misalnya catatan atau lampiran bukti) dapat dikelola lebih rapi untuk kebutuhan pelaporan.
 
 \end{document}
