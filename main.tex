@@ -34,6 +34,7 @@
 \renewcommand{\thefigure}{\thesection.\arabic{figure}}
 \makeatletter
 \@addtoreset{figure}{section}
+\renewcommand*{\theHfigure}{\thesection.\arabic{figure}}
 \makeatother
 
 % Format chapter
@@ -84,8 +85,8 @@
 }
 
 % Info dokumen
-\newcommand{\Pertemuan}{3}
-\newcommand{\Materi}{Routing dan Controller pada Laravel}
+\newcommand{\Pertemuan}{8}
+\newcommand{\Materi}{Xpath \& Advance Interaction}
 \title{Laporan Praktikum \\ Pengujian Perangkat Lunak\\
 Pertemuan \Pertemuan\\
 \Materi}
@@ -204,8 +205,8 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Tujuan Praktikum}
 \begin{enumerate}
-    \item 
-    \item 
+  \item Mahasiswa dapat memahami dan mengimplementasikan penggunaan locator \textit{XPath} pada Selenium WebDriver untuk memfilter data pada tabel serta melakukan verifikasi hasil filter.
+  \item Mahasiswa diharapkan dapat memahami dan mengimplementasikan pengujian \textit{advance interaction} (hover, input keyboard, dan drag-and-drop) menggunakan Selenium \textbf{Actions} serta memverifikasi perubahan UI melalui assertion pada JUnit 5.
 \end{enumerate}
 
 %contoh gambar dan kode
@@ -223,8 +224,109 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Hasil dan Pembahasan}
 \subsection{Persiapan Praktikum}
-\subsection{Hasil}
+\par Pada praktikum pertemuan ini, saya melanjutkan Project Maven dari pertemuan sebelumnya tanpa menambahkan fitur baru. Fokus utama praktikum adalah penerapan Selenium WebDriver untuk melakukan otomasi pengujian pada beberapa halaman web, khususnya penggunaan locator berbasis \textit{XPath} serta pengujian \textit{advance interaction} (hover, keyboard, dan drag-and-drop).
+
+\par Langkah awal yang saya lakukan adalah memastikan konfigurasi proyek dan dependensi pengujian tetap berjalan dengan baik, kemudian menjalankan seluruh pengujian melalui fitur \textit{Run Test} di VS Code maupun melalui perintah \textbf{mvn test}. Tahap ini dilakukan untuk memastikan inisialisasi browser, eksekusi skenario, serta proses \textit{teardown} dapat berjalan konsisten.
+
+\par Setelah lingkungan siap, saya menambahkan dua kelas pengujian baru sesuai kebutuhan praktikum, yaitu \textbf{XpathTest} untuk skenario \textit{XPath} pada \url{https://practicetestautomation.com/practice-test-table/} dan \textbf{AdvanceInteractionTest} untuk skenario \textit{advance interaction} pada \url{https://the-internet.herokuapp.com/}. Kedua kelas tersebut memanfaatkan anotasi \textbf{@BeforeEach} untuk inisialisasi driver dan membuka halaman uji, serta \textbf{@AfterEach} untuk menutup browser setelah pengujian selesai.
+
+\subsection{Soal Praktikum}
+\par Soal yang dikerjakan pada pertemuan ini adalah sebagai berikut:
+\begin{enumerate}
+  \item Akses \url{https://practicetestautomation.com/practice-test-table/}, menggunakan locator XPath untuk memfilter data pada tabel hanya untuk yang memiliki nilai \textbf{Language} = \textbf{Java}.
+  \item Akses link yang sama dan menggunakan locator XPath untuk memfilter data pada tabel hanya untuk yang memiliki nilai \textbf{Level} yang ditampilkan hanya \textbf{Beginner} saja.
+  \item Akses link yang sama dan menggunakan locator XPath untuk mencari data course dengan nama \textbf{Java for Testers} lalu mengakses link \textbf{View} yang ada pada data tersebut.
+  \item Akses \url{https://the-internet.herokuapp.com/} dan akses ke halaman \textbf{hovers} untuk menguji interaksi mouse hover pada gambar yang ada di halaman tersebut.
+  \item Akses link yang sama dan akses ke halaman \textbf{key\_presses} untuk menguji interaksi keyboard pada halaman tersebut.
+  \item Akses link yang sama dan akses ke halaman \textbf{drag\_and\_drop} untuk menguji interaksi drag-and-drop dari \textbf{A} ke \textbf{B}.
+\end{enumerate}
+
+\subsection{Implementasi Pengujian}
+\par Implementasi pengujian pada praktikum ini dibagi menjadi dua file sesuai dengan target website yang diuji.
+
+\subsubsection{Pengujian XPath pada Practice Test Automation}
+\par Pada bagian ini saya menguji fitur filter dan navigasi link pada tabel \textbf{Automation Courses} menggunakan locator XPath. Halaman yang digunakan adalah dari practice test automation \url{https://practicetestautomation.com/practice-test-table/}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{resource/image/01-halaman-practice-table.png}
+  \caption{Halaman \textit{Practice Test Automation} (bagian filter dan tabel course)}
+  \label{fig:practicetestautomation-filters}
+\end{figure}
+
+\par Pada gambar \ref{fig:practicetestautomation-filters}, saya menggunakan komponen filter \textbf{Language} dan \textbf{Level} untuk menyaring baris yang tampil pada tabel. Bagian ini menjadi objek yang diuji pada skenario XPath, yaitu memilih filter tertentu lalu memverifikasi bahwa hanya baris yang sesuai yang masih terlihat.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{resource/image/02-table.png}
+  \caption{Contoh hasil tabel setelah filter diterapkan (baris yang tampil sesuai kriteria)}
+  \label{fig:practicetestautomation-table}
+\end{figure}
+
+\par Pada gambar \ref{fig:practicetestautomation-table}, hasil filter ditunjukkan melalui baris yang masih tampil pada tabel. Pada implementasi pengujian, baris yang tersembunyi (\textit{display: none}) diabaikan sehingga validasi hanya dilakukan pada baris yang benar-benar terlihat.
+
+\lstinputlisting[language=Java, caption={Implementasi pengujian XPath pada Practice Test Automation}, label={lst:xpath-test}]{resource/code/XpathTest.java}
+
+\par Pada kode \ref{lst:xpath-test}, saya menguji tiga skenario utama. Pertama, saya memilih filter \textbf{Java} menggunakan XPath \textbf{//label[contains(., 'Java')]/input}, kemudian mengambil baris tabel yang terlihat dengan XPath \textbf{//table[@id='courses\_table']//tbody/tr[@style!='display: none;']} dan memverifikasi setiap baris mengandung kata \textbf{Java}. Kedua, saya mengaktifkan filter \textbf{Beginner} serta memastikan filter \textbf{Intermediate} dan \textbf{Advanced} tidak terpilih, lalu memverifikasi semua baris yang tampil memiliki level \textbf{Beginner}. Ketiga, saya mencari baris course dengan nama \textbf{Java for Testers} menggunakan XPath \textbf{//tbody/tr[td[contains(., 'Java for Testers')]]//a[text()='View']}, mengklik link \textbf{View}, berpindah ke tab baru, lalu memverifikasi URL yang terbuka sesuai dengan halaman course yang diharapkan.
+
+\subsubsection{Pengujian \textit{Advance Interaction} pada The Internet}
+\par Pada bagian ini saya menguji interaksi lanjutan menggunakan class \textbf{Actions}, yaitu hover pada elemen, input keyboard, serta drag-and-drop. Website yang digunakan adalah \url{https://the-internet.herokuapp.com/}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{resource/image/03-halaman hovers.png}
+  \caption{Halaman \textit{hovers} untuk pengujian interaksi mouse hover}
+  \label{fig:herokuapp-hovers}
+\end{figure}
+
+\par Pada gambar \ref{fig:herokuapp-hovers}, informasi pengguna baru muncul ketika kursor diarahkan ke gambar. Kondisi ini diuji dengan melakukan hover pada elemen gambar, lalu memverifikasi teks caption yang muncul (misalnya \textbf{name: user1}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{resource/image/04-halaman key press.png}
+  \caption{Halaman \textit{key\_presses} untuk pengujian input keyboard}
+  \label{fig:herokuapp-key-presses}
+\end{figure}
+
+\par Pada gambar \ref{fig:herokuapp-key-presses}, hasil tombol yang ditekan akan ditampilkan pada teks \textbf{You entered: ...}. Pada pengujian, saya mengirim beberapa input tombol melalui Selenium dan memverifikasi bahwa hasil yang muncul sesuai dengan tombol yang dikirim.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{resource/image/05-halaman drag an drop.png}
+  \caption{Halaman \textit{drag\_and\_drop} untuk pengujian drag-and-drop dari A ke B}
+  \label{fig:herokuapp-drag-and-drop}
+\end{figure}
+
+\par Pada gambar \ref{fig:herokuapp-drag-and-drop}, terdapat dua elemen kotak \textbf{A} dan \textbf{B}. Skenario yang diuji adalah memindahkan kotak \textbf{A} ke area \textbf{B} dan memastikan label pada kotak tujuan berubah sesuai hasil drag-and-drop.
+
+\lstinputlisting[language=Java, caption={Implementasi pengujian \textit{advance interaction} pada The Internet}, label={lst:advance-interaction-test}]{resource/code/AdvanceInteractionTest.java}
+
+\par Pada kode \ref{lst:advance-interaction-test}, saya membuat tiga pengujian. Pada \textbf{hoverTest()}, saya melakukan hover ke elemen dengan selector CSS \textbf{.figure} lalu mengambil teks \textbf{.figcaption h5} untuk divalidasi sesuai urutan \textbf{name: user1}, \textbf{name: user2}, dan \textbf{name: user3}. Pada \textbf{keyPressesTest()}, saya memfokuskan input dengan id \textbf{target}, mengirim tombol \textbf{SHIFT}, \textbf{UP}, dan \textbf{BACK\_SPACE}, kemudian setiap kali membaca elemen \textbf{result} untuk memastikan output berisi nama tombol yang benar. Pada \textbf{dragAndDropTest()}, saya mensimulasikan drag-and-drop dengan urutan \textit{click and hold} pada kotak \textbf{A}, \textit{move} ke kotak \textbf{B}, lalu \textit{release}, dan memverifikasi bahwa header pada kotak \textbf{B} berubah menjadi \textbf{A}.
+
+\subsection{Hasil Akhir Pengujian}
+\par Setelah seluruh skenario diimplementasikan, saya menjalankan pengujian pada kedua kelas test. Hasil eksekusi menunjukkan seluruh test berhasil dijalankan tanpa kegagalan.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/image/06-Xpathtes Result.png}
+  \caption{Hasil eksekusi pengujian pada kelas \textbf{XpathTest} (seluruh test berhasil)}
+  \label{fig:hasil-xpathtest}
+\end{figure}
+
+\par Pada gambar \ref{fig:hasil-xpathtest}, seluruh skenario pada kelas \textbf{XpathTest} berhasil dijalankan. Ini menunjukkan bahwa proses pemilihan filter menggunakan XPath, pengambilan baris tabel yang terlihat, serta validasi isi baris dan URL hasil klik link berjalan sesuai harapan.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/image/07-Advance interaction test result.png}
+  \caption{Hasil eksekusi pengujian pada kelas \textbf{AdvanceInteractionTest} (seluruh test berhasil)}
+  \label{fig:hasil-advanceinteractiontest}
+\end{figure}
+
+\par Pada gambar \ref{fig:hasil-advanceinteractiontest}, pengujian interaksi lanjutan juga berhasil dijalankan. Hasil ini memperlihatkan bahwa aksi hover, input keyboard, dan drag-and-drop yang disimulasikan melalui class \textbf{Actions} dapat menghasilkan perubahan UI yang kemudian tervalidasi melalui assertion.
 
 \section{Kesimpulan}
+\par Berdasarkan hasil praktikum pertemuan ini, saya memahami bahwa Selenium WebDriver dapat digunakan untuk melakukan otomasi pengujian berbasis browser dan memvalidasi perilaku aplikasi web secara end-to-end. Dengan memanfaatkan locator berbasis \textit{XPath}, elemen pada halaman dapat diakses berdasarkan atribut, struktur DOM, maupun teks yang ditampilkan. Pada studi kasus tabel course, pendekatan ini memungkinkan saya menerapkan filter (\textbf{Language} = \textbf{Java} dan \textbf{Level} = \textbf{Beginner}), mengambil baris tabel yang benar-benar terlihat, lalu memverifikasi bahwa data yang ditampilkan sudah sesuai kriteria. Selain itu, pengujian juga mencakup klik link \textbf{View} pada course \textbf{Java for Testers} serta perpindahan tab untuk memastikan navigasi dan URL tujuan sesuai yang diharapkan.
+
+\par Selain itu, saya juga memahami bahwa pengujian web tidak hanya berfokus pada verifikasi konten statis, tetapi juga interaksi pengguna yang lebih kompleks. Pada praktikum ini, class \textbf{Actions} digunakan untuk mensimulasikan hover agar informasi tersembunyi muncul, mengirim input tombol pada halaman \textbf{key\_presses} dan memverifikasi output \textbf{You entered}, serta melakukan drag-and-drop dari \textbf{A} ke \textbf{B} dengan urutan aksi \textit{click-and-hold} $\rightarrow$ \textit{move} $\rightarrow$ \textit{release}. Hasil eksekusi menunjukkan seluruh skenario pengujian berhasil dijalankan, sehingga implementasi locator XPath dan \textit{advance interaction} pada pengujian Selenium dapat dianggap berjalan dengan baik.
 
 \end{document}
