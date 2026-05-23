@@ -84,8 +84,8 @@
 }
 
 % Info dokumen
-\newcommand{\Pertemuan}{3}
-\newcommand{\Materi}{Routing dan Controller pada Laravel}
+\newcommand{\Pertemuan}{9}
+\newcommand{\Materi}{Page Object Model dan Behavior Driven Development}
 \title{Laporan Praktikum \\ Pengujian Perangkat Lunak\\
 Pertemuan \Pertemuan\\
 \Materi}
@@ -204,8 +204,10 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Tujuan Praktikum}
 \begin{enumerate}
-    \item 
-    \item 
+    \item Mahasiswa mampu memahami dan mengimplementasikan konsep BDD dalam kode pengujian otomatis
+    \item Mempelajari cara menggunakan Gherkin dan Cucumber untuk menulis skenario pengujian dan mengimplementasikan kode pengujian
+    \item Mahasiswa mampu memahami konsep Page Object Model (POM)
+    \item Mahasiswa mampu mengimplementasikan POM dalam pengujian
 \end{enumerate}
 
 %contoh gambar dan kode
@@ -222,8 +224,25 @@ Dosen Pengampu & : & \DosenPengampu \\
 % \end{lstlisting}
 
 \section{Hasil dan Pembahasan}
-\subsection{Persiapan Praktikum}
-\subsection{Hasil}
+\subsection{Page Object Model}
+\subsection{Tugas}
+\begin{enumerate}
+  \item Ubah kode test login (saucedemo) kalian menjadi bentuk POM.
+  \item Explorasi dan implementasikan Centralized Locators. Buat class tersendiri berisi semua locator sehingga apabila ada perubahan locator hanya perlu mengubah di satu class.
+\end{enumerate}
+
+\subsubsection{Persiapan Praktikum}
+\subsubsection{Hasil}
+
+\subsection{Behavior Driven Development}
+\begin{enumerate}
+  \item Implementasikan Gherkin Syntax dan Cucumber pada studi kasus login
+  \item Eksplorasi kegunaan kata kunci \textbf{Tag} pada gherkin syntax dan ConfigurationParameter filter tag pada test runner. Implementasikan satu contoh untuk menentukan test mana yang akan dijalankan ketika eksekusi dilakukan melalui test runner! @ConfigurationParameter(key = Constants.FILTER\_TAGS\_PROPERTY\_NAME, value = ...)
+\end{enumerate}
+\subsubsection{Persiapan Praktikum}
+\subsubsection{Hasil}
+
+\subsection{Hasil Jalankan Test}
 
 \section{Kesimpulan}
 
