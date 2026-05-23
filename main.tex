@@ -30,11 +30,21 @@
 \renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
 \renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
 
+% Tambahan level heading: subsubsubsection (untuk memecah langkah praktikum)
+\titleclass{\subsubsubsection}{straight}[\subsubsection]
+\newcounter{subsubsubsection}[subsubsection]
+\renewcommand{\thesubsubsubsection}{\thesubsubsection.\arabic{subsubsubsection}}
+\titleformat{\subsubsubsection}[hang]
+  {\normalfont\normalsize\bfseries}{\thesubsubsubsection}{1em}{}
+\titlespacing*{\subsubsubsection}{0pt}{1.0em}{0.5em}
+\setcounter{secnumdepth}{4}
+
 % Penomoran figure mengikuti section (misal, Gambar A.1, A.2, ...)
 \renewcommand{\thefigure}{\thesection.\arabic{figure}}
 \makeatletter
 \@addtoreset{figure}{section}
 \makeatother
+\renewcommand*{\theHfigure}{\thesection.\arabic{figure}}
 
 % Format chapter
 \titleformat{\chapter}[hang]
@@ -74,8 +84,17 @@
 
 \lstset{style=vscode-dark}
 
+% Bahasa tambahan untuk file .feature (Gherkin) agar listing lebih terbaca
+\lstdefinelanguage{Gherkin}{
+  morekeywords={Feature,Scenario,Examples,Given,When,Then,And,But,Background},
+  sensitive=false,
+  morecomment=[l]{\#},
+  morestring=[b]",
+}
+
 % Pengaturan hyperref
 \hypersetup{
+  hypertexnames=false,
     colorlinks=true,
     linkcolor=black,
     filecolor=magenta,
@@ -225,25 +244,100 @@ Dosen Pengampu & : & \DosenPengampu \\
 
 \section{Hasil dan Pembahasan}
 \subsection{Page Object Model}
-\subsection{Tugas}
+\subsubsection{Tugas}
 \begin{enumerate}
   \item Ubah kode test login (saucedemo) kalian menjadi bentuk POM.
   \item Explorasi dan implementasikan Centralized Locators. Buat class tersendiri berisi semua locator sehingga apabila ada perubahan locator hanya perlu mengubah di satu class.
 \end{enumerate}
 
 \subsubsection{Persiapan Praktikum}
+\par Pada pertemuan ini, saya melanjutkan proyek Maven Selenium dari pertemuan sebelumnya sebagai titik awal (folder \texttt{resource/code/awal}). Pada tahap awal pengerjaan \textbf{tidak ada perubahan pada \texttt{pom.xml}} karena dependensi yang dibutuhkan masih sama, yaitu \textbf{JUnit 5} sebagai framework pengujian dan \textbf{Selenium WebDriver} untuk otomasi browser.
+
+\par Sebelum refaktor dilakukan, saya memastikan konfigurasi proyek tetap berjalan dengan baik dengan cara menjalankan kembali pengujian yang sudah ada. Tahap ini dilakukan untuk memastikan proses inisialisasi browser (ChromeDriver), eksekusi skenario, serta proses \textit{teardown} berjalan konsisten. Setelah memastikan semua berjalan dengan baik, saya melanjutkan ke tahap refaktor menggunakan Page Object Model (POM) dan implementasi Centralized Locators.
+
 \subsubsection{Hasil}
+\subsubsubsection*{Kondisi Pengujian Sebelum POM}
+\par Pada tahap awal (folder \texttt{awal}), pengujian login SauceDemo masih ditulis langsung di dalam kelas test. Locator element didefinisikan dengan memanggil \texttt{findElement(By...)} secara berulang di beberapa method, sehingga ketika ada perubahan locator, perbaikannya berpotensi tersebar di banyak tempat.
+
+\lstinputlisting[language=Java, caption={Kode awal pengujian login SauceDemo sebelum refaktor POM}, label={lst:sauce-awal}]{resource/code/awal/src/test/java/SauceTest.java}
+
+\par Berdasarkan Listing \ref{lst:sauce-awal}, terlihat bahwa locator \texttt{user-name}, \texttt{password}, dan \texttt{login-button} digunakan berulang, serta proses login dan verifikasinya berada pada level test. Kondisi ini menjadi alasan utama dilakukan refaktor menggunakan Page Object Model.
+
+\subsubsubsection*{Soal 1 (POM): Membuat Page Object untuk Halaman Login dan Inventory}
+\par Implementasi POM saya lakukan dengan membuat class \texttt{LoginPage} dan \texttt{Inventory}. Tujuannya adalah memindahkan aksi-aksi yang terkait halaman (misalnya proses login) ke dalam class khusus, sehingga kelas test hanya berfokus pada skenario dan \textit{assertion}.
+
+\lstinputlisting[language=Java, caption={Page Object untuk halaman login SauceDemo}, label={lst:loginpage}]{resource/code/akhir/src/test/java/page/LoginPage.java}
+
+\par Listing \ref{lst:loginpage} mendefinisikan method \texttt{login(...)} untuk melakukan input username, password, lalu menekan tombol login. Dengan pola ini, detail interaksi element disembunyikan di level page object.
+
+\lstinputlisting[language=Java, caption={Page Object untuk halaman inventory SauceDemo}, label={lst:inventory}]{resource/code/akhir/src/test/java/page/Inventory.java}
+
+\par Listing \ref{lst:inventory} digunakan sebagai representasi halaman inventory. Pada praktikum ini, verifikasi dilakukan dengan mengecek elemen label \textit{Products} agar memastikan halaman inventory benar-benar tampil.
+
+\lstinputlisting[language=Java, caption={Pengujian login SauceDemo menggunakan Page Object Model}, label={lst:sauce-pom}]{resource/code/akhir/src/test/java/test/SauceTest.java}
+
+\par Pada Listing \ref{lst:sauce-pom}, skenario login sukses dijalankan untuk beberapa akun menggunakan \textbf{ParameterizedTest}. Setelah pemanggilan \texttt{login(...)} dari \texttt{LoginPage}, validasi dilakukan melalui pengecekan URL inventory dan pengecekan komponen pada \texttt{Inventory}.
+
+\subsubsubsection*{Soal 2 (Centralized Locators): Menyatukan Semua Locator}
+\par Setelah struktur POM terbentuk, langkah berikutnya adalah mengekstrak seluruh locator ke satu class terpusat. Pada praktikum ini saya membuat class \texttt{CentralizedLocators} yang berisi kumpulan locator untuk beberapa website yang diuji (SauceDemo, Practice Test Automation, The Internet, dan Bing).
+
+\lstinputlisting[language=Java, caption={Centralized Locators untuk menyatukan semua locator}, label={lst:centralized-locators}]{resource/code/akhir/src/test/java/locators/CentralizedLocators.java}
+
+\par Pada Listing \ref{lst:centralized-locators}, setiap locator disimpan sebagai konstanta \texttt{By}. Dengan cara ini, jika ada perubahan atribut (misalnya \textit{id} atau XPath) maka perubahannya cukup dilakukan pada satu file saja, lalu seluruh test/page object akan ikut menyesuaikan.
 
 \subsection{Behavior Driven Development}
+\subsubsection{Tugas}
 \begin{enumerate}
   \item Implementasikan Gherkin Syntax dan Cucumber pada studi kasus login
   \item Eksplorasi kegunaan kata kunci \textbf{Tag} pada gherkin syntax dan ConfigurationParameter filter tag pada test runner. Implementasikan satu contoh untuk menentukan test mana yang akan dijalankan ketika eksekusi dilakukan melalui test runner! @ConfigurationParameter(key = Constants.FILTER\_TAGS\_PROPERTY\_NAME, value = ...)
 \end{enumerate}
 \subsubsection{Persiapan Praktikum}
+\par Setelah refaktor POM selesai, saya melanjutkan implementasi BDD menggunakan Cucumber. Pada tahap ini terdapat perubahan pada \texttt{pom.xml}, yaitu penambahan dependency Cucumber dan konfigurasi versi melalui \textit{BOM} agar konsisten.
+
+\lstinputlisting[language=XML, caption={Konfigurasi \texttt{pom.xml} pada tahap BDD untuk menambahkan dependency Cucumber}, label={lst:pom-bdd}]{resource/code/akhir/pom.xml}
+
+\par Berdasarkan Listing \ref{lst:pom-bdd}, saya menambahkan beberapa depedency cucumber: \texttt{cucumber-java}, \texttt{cucumber-junit-platform-engine}, serta \texttt{junit-platform-suite} agar eksekusi skenario Cucumber dapat dijalankan melalui JUnit Platform dan terintegrasi dengan \textbf{mvn test}.
+
 \subsubsection{Hasil}
+\subsubsubsection*{Soal 1: Menulis Skenario Gherkin dan Step Definition}
+\par Implementasi BDD dimulai dengan menulis skenario pengujian menggunakan Gherkin pada file \texttt{login.feature}. Pada file ini saya mendefinisikan skenario login sukses (\textit{scenario outline} untuk beberapa akun) dan skenario login gagal untuk akun \textit{locked out user}.
+
+\lstinputlisting[language=Gherkin, caption={Skenario pengujian login SauceDemo menggunakan Gherkin}, label={lst:gherkin-login}]{resource/code/akhir/src/test/resources/features/login.feature}
+
+\par Pada Listing \ref{lst:gherkin-login}, setiap langkah ditulis menggunakan kata kunci \textbf{Given--When--Then}. Selain itu, saya menambahkan tag \textbf{@positive} dan \textbf{@negative} untuk membedakan skenario positif dan negatif.
+
+\lstinputlisting[language=Java, caption={Implementasi step definition untuk skenario login SauceDemo}, label={lst:stepdef-login}]{resource/code/akhir/src/test/java/steps/SauceLoginStepDef.java}
+
+\par Listing \ref{lst:stepdef-login} berisi pemetaan langkah Gherkin menjadi kode Java. Inisialisasi dan penutupan browser dilakukan menggunakan hook \textbf{@Before} dan \textbf{@After}. Pada step login, proses input dan klik login didelegasikan ke \texttt{LoginPage} sehingga tetap konsisten dengan pendekatan POM.
+
+\lstinputlisting[language=Java, caption={Test runner untuk menjalankan semua skenario Cucumber}, label={lst:testrunner}]{resource/code/akhir/src/test/java/runners/TestRunner.java}
+
+\par Pada Listing \ref{lst:testrunner}, eksekusi Cucumber diintegrasikan melalui JUnit Platform Suite. Konfigurasi \texttt{GLUE\_PROPERTY\_NAME} mengarahkan Cucumber untuk mencari step definition pada package \texttt{steps}, sedangkan plugin \texttt{pretty, summary} digunakan agar output lebih jelas saat dijalankan melalui Maven.
+
+\subsubsubsection*{Soal 2 (Tagging): Memfilter Test Menggunakan Tag}
+\par Setelah skenario berjalan, saya mengeksplorasi penggunaan \textbf{tag} untuk menentukan skenario mana yang dijalankan. Untuk itu, saya membuat runner terpisah yang menambahkan parameter filter tag pada konfigurasi Cucumber.
+
+\lstinputlisting[language=Java, caption={Runner dengan filter tag untuk menjalankan skenario tertentu}, label={lst:tagged-runner}]{resource/code/akhir/src/test/java/runners/TaggedTestRunner.java}
+
+\par Pada Listing \ref{lst:tagged-runner}, parameter \texttt{FILTER\_TAGS\_PROPERTY\_NAME} diisi dengan \texttt{@negative}. Artinya, ketika runner ini dijalankan, hanya skenario bertag \textbf{@negative} yang akan dieksekusi. Pendekatan ini berguna ketika ingin menjalankan subset test tertentu tanpa mengubah isi feature.
 
 \subsection{Hasil Jalankan Test}
 
+\par Setelah implementasi POM dan BDD digabungkan, saya menjalankan seluruh test menggunakan perintah \textbf{mvn test}. Eksekusi ini mencakup pengujian JUnit biasa (mis. \texttt{SauceTest}) dan juga suite Cucumber melalui runner (mis. \texttt{TestRunner}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{resource/jalankan mvn test.png}
+  \caption{Hasil eksekusi \textit{mvn test} pada proyek akhir}
+  \label{fig:mvn-test}
+\end{figure}
+
+\par Pada Gambar \ref{fig:mvn-test}, terlihat bahwa skenario Cucumber berhasil dijalankan (6 skenario dan 23 step seluruhnya \textit{passed}). Maven juga merangkum keseluruhan pengujian tanpa \textit{failure} maupun \textit{error}. Pada output juga muncul warning terkait \textit{CDP implementation} dari Selenium, namun warning tersebut tidak menghentikan eksekusi dan seluruh pengujian tetap berhasil.
+
 \section{Kesimpulan}
+
+\par Berdasarkan praktikum ini, saya memahami bahwa penerapan \textbf{Page Object Model (POM)} membantu membuat kode pengujian lebih rapi dan mudah dipelihara. Interaksi halaman dipusatkan pada class page object (misalnya \texttt{LoginPage} dan \texttt{Inventory}), sehingga kelas test menjadi lebih fokus pada alur skenario dan \textit{assertion}. Ditambah dengan \textbf{Centralized Locators}, perubahan locator dapat ditangani pada satu tempat tanpa perlu mencari dan mengubah banyak file.
+
+\par Selain itu, penerapan \textbf{Behavior Driven Development (BDD)} menggunakan \textbf{Gherkin} dan \textbf{Cucumber} membuat skenario pengujian lebih mudah dibaca karena ditulis menyerupai bahasa natural (Given--When--Then). Implementasi \textbf{tag} dan filter pada runner juga mempermudah pemilihan skenario yang ingin dijalankan, sehingga proses pengujian dapat lebih efisien. Dari hasil \textbf{mvn test}, seluruh skenario dan test berhasil dijalankan tanpa error, menandakan bahwa refaktor POM dan integrasi BDD berjalan dengan baik.
 
 \end{document}
